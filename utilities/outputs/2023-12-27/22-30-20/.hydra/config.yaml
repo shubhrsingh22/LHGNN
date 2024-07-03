@@ -1,0 +1,6 @@
+data:
+  path: ${paths}
+  json_dir: ${paths.root_dir}/datafiles
+  set_list:
+  - dev
+  - eval

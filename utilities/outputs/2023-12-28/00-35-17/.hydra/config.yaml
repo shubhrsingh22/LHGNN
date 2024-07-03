@@ -1,0 +1,13 @@
+path: ${paths.data_dir}/FSD50K/
+json_dir: ${paths.root_dir}/datafiles
+set_list:
+- dev
+- eval
+paths:
+  root_dir: /homes/ss380/deeplearn/hypergraph/hypergraph_exps/HGANN
+  home_dir: /homes/ss380/deeplearn/hypergraph/hypergraph_exps/hyper_exps
+  content_dir: /import/research_c4dm/ss380/hypergraph_exps
+  data_dir: /import/c4dm-datasets
+  log_dir: ${paths.content_dir}/logs/
+  output_dir: ${hydra:runtime.output_dir}
+  work_dir: ${hydra:runtime.cwd}
