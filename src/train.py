@@ -64,6 +64,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :return: A tuple with metrics and dict with all instantiated objects.
     """
     # set seed for random number generators in pytorch, numpy and python.random
+    print("In train")
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
@@ -73,36 +74,39 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating model <{cfg.model._target_}>")
     
     model: LightningModule = hydra.utils.instantiate(cfg.model)
-    state_dict = torch.load(cfg.get('ckpt_path'))['state_dict']
+
+    if cfg.get('pretrained'):
+
+        state_dict = torch.load(cfg.get('ckpt_path'))['state_dict']
     
     
 
-    own_state = model.net.state_dict()
+        own_state = model.net.state_dict()
     
-    for name, param in state_dict.items():
+        for name, param in state_dict.items():
         
         
-        if name == 'stem.convs.0.weight':
+            if name == 'stem.convs.0.weight':
             
-            param = torch.mean(param,dim=1,keepdim=True)
+                param = torch.mean(param,dim=1,keepdim=True)
         
-        if 'pos_embed' in name:
+            if 'pos_embed' in name:
             
-            param = F.interpolate(param, size=(cfg.data.get('num_mels') // 4,cfg.data.get('target_len') // 4), mode='bicubic', align_corners=False)
+                param = F.interpolate(param, size=(cfg.data.get('num_mels') // 4,cfg.data.get('target_len') // 4), mode='bicubic', align_corners=False)
                         
-        if 'relative_pos' in name:
+            if 'relative_pos' in name:
 
-            target_shape = own_state[name].shape[-2:]
-            h = own_state[name].shape[1]
-            w = own_state[name].shape[2]
-            param = F.interpolate(param.unsqueeze(1), size=(h,w), mode='bicubic', align_corners=False).squeeze(1)
+                target_shape = own_state[name].shape[-2:]
+                h = own_state[name].shape[1]
+                w = own_state[name].shape[2]
+                param = F.interpolate(param.unsqueeze(1), size=(h,w), mode='bicubic', align_corners=False).squeeze(1)
         
-        if 'prediction' in name:
-            continue
+            if 'prediction' in name:
+                continue
 
-        own_state[name].copy_(param)
+            own_state[name].copy_(param)
     
-    model.net.load_state_dict(own_state)
+        model.net.load_state_dict(own_state)
     
    # model.net._modules['prediction'][-1] = nn.Conv2d(1024,cfg.model.net.get('num_class'),1,bias=True)
 
@@ -203,12 +207,13 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
 def main(cfg: DictConfig) -> Optional[float]:
     """Main entry point for training.
-
+    
     :param cfg: DictConfig configuration composed by Hydra.
     :return: Optional[float] with optimized metric value.
     """
     # apply extra utilities
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
+    print("In main")
     extras(cfg)
     train(cfg)
     # train the model
@@ -224,6 +229,6 @@ def main(cfg: DictConfig) -> Optional[float]:
 
 
 if __name__ == "__main__":
-    print("In main")
+    
     torch.set_float32_matmul_precision("high")
     main()

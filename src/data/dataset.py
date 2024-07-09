@@ -31,6 +31,7 @@ class FSDDataset(Dataset):
         self.mixup = conf['mixup']
         self.index_dict = label_to_index(label_csv)
         self.num_labels = len(self.index_dict)
+        
         self.num_mels = conf['num_mels']
         self.fmin = conf['fmin']
         self.fmax = conf['fmax']

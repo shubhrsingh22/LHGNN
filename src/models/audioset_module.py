@@ -4,7 +4,7 @@ import torch
 from pytorch_lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.classification.accuracy import Accuracy
-from src.utilities.stats import calculate_stats
+from src.utilities.utilities.stats import calculate_stats
 import wandb
 import bisect
 import torch.distributed as dist
@@ -42,6 +42,9 @@ class TaggingModule(LightningModule):
             self.criterion = torch.nn.BCELoss()
         elif self.loss == 'cross_entropy':
             self.criterion = torch.nn.CrossEntropyLoss()
+        elif self.loss == 'bcelogit':
+            self.criterion = torch.nn.BCEWithLogitsLoss()
+        
         #self.ap = AveragePrecision(num_classes=200, on_step=False, on_epoch=True, dist_sync_on_step=True,task='multilabel',num_labels=200)
         # for averaging loss across batches
         self.train_loss = MeanMetric()
@@ -56,8 +59,8 @@ class TaggingModule(LightningModule):
         self.test_predictions = []
         self.test_targets = []
         self.milestones = [10,15,20,25,30,35,40]
-        self.ap = AveragePrecision(task="multilabel", num_labels=200, average=None)
-        self.ap_test = AveragePrecision(task="multilabel", num_labels=200, average=None)
+        self.ap = AveragePrecision(task="multilabel", num_labels=527, average=None)
+        self.ap_test = AveragePrecision(task="multilabel", num_labels=527, average=None)
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
 

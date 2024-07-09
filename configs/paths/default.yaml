@@ -4,11 +4,11 @@
 
 # @package _global_
 root_dir: ${oc.env:PROJECT_ROOT}
-exp_dir: /import/research_c4dm/ss380/hypergraph_exps/audio_tagging/fsd50k
+exp_dir: /data/EECS-MachineListeningLab/shubhr/hgann
 
 
 # path to data directory
-data_dir: /import/c4dm-datasets/FSD50K
+data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet
 
 # path to logging directory
 log_dir: ${paths.exp_dir}/logs/

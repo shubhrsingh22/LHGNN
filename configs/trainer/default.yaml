@@ -6,10 +6,10 @@ min_epochs: 30 # prevents early stopping
 max_epochs: 50 
 
 accelerator: gpu
-devices: 3
+devices: 1
 gradient_clip_val: 0.5
 # mixed precision for extra speed-up
-precision: 32
+precision: bf16
 detect_anomaly: false
 # perform a validation loop every N training epochs
 check_val_every_n_epoch: 1
@@ -17,7 +17,7 @@ check_val_every_n_epoch: 1
 # set True to to ensure deterministic results
 # makes training slower but gives more reproducibility than just setting seeds
 deterministic: False
-strategy: ddp_find_unused_parameters_true
+strategy: auto #ddp_find_unused_parameters_true
 num_nodes: 1
 sync_batchnorm: False
 use_distributed_sampler: True

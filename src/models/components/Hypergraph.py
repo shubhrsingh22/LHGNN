@@ -302,7 +302,7 @@ class HGCN(nn.Module):
         
         x = self.prediction(x)
             
-        preds = torch.sigmoid(x)
+        #preds = torch.sigmoid(x)
         
         preds = preds.squeeze(-1).squeeze(-1)
         
