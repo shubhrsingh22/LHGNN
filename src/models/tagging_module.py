@@ -4,10 +4,16 @@ import torch
 from pytorch_lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.classification.accuracy import Accuracy
-from src.utilities.stats import calculate_stats
+from src.utilities.utilities.stats import calculate_stats
 import wandb
 import bisect
-#from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
+import torch.distributed as dist
+from timm.scheduler import CosineLRScheduler,StepLRScheduler
+from torchmetrics import AveragePrecision
+import logging 
+
+
+
 class TaggingModule(LightningModule):
 
     def __init__(
@@ -39,7 +45,10 @@ class TaggingModule(LightningModule):
             self.criterion = torch.nn.BCELoss()
         elif self.loss == 'cross_entropy':
             self.criterion = torch.nn.CrossEntropyLoss()
+        elif self.loss == 'bcelogit':
+            self.criterion = torch.nn.BCEWithLogitsLoss()
         
+        #self.ap = AveragePrecision(num_classes=200, on_step=False, on_epoch=True, dist_sync_on_step=True,task='multilabel',num_labels=200)
         # for averaging loss across batches
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
@@ -53,6 +62,8 @@ class TaggingModule(LightningModule):
         self.test_predictions = []
         self.test_targets = []
         self.milestones = [10,15,20,25,30,35,40]
+    
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
 
@@ -92,6 +103,9 @@ class TaggingModule(LightningModule):
         
         return loss, preds, y
     
+    
+        
+
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -102,10 +116,12 @@ class TaggingModule(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
+        if batch_idx == 0:
+            print(f'hyperparameters: {self.hparams}')
         loss,preds,y = self.model_step(batch)
         
         self.train_loss(loss)
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True,sync_dist=True)
+        self.log("train/loss", self.train_loss, on_step=True, on_epoch=True, prog_bar=True,sync_dist=True)
         return loss
     
     def on_train_epoch_end(self) -> None:
@@ -120,78 +136,107 @@ class TaggingModule(LightningModule):
         :param batch_idx: The index of the current batch.
         """
         loss, preds, targets = self.model_step(batch)
-        #preds = torch.sigmoid(preds)
-        target_cpu = targets.cpu().detach()
-        preds_cpu = preds.cpu().detach()
+        
+        target_cpu = targets
+        preds_cpu = preds
+
         self.val_predictions.append(preds_cpu)
         self.val_targets.append(target_cpu)
 
-        #stats = calculate_stats(preds_cpu, target_cpu)
-        #print(stats['AP'])
         # update and log metrics
         self.val_loss(loss)
         #self.val_mAP(stats['AP'])
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
-        #self.log("val/mAP", self.val_mAP, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+        #self.log("val/mAP-metric", map, on_step=True, on_epoch=True, prog_bar=True)
     
-    def on_validation_epoch_end(self) -> None:
+    def on_validation_epoch_end(self)->None:
         "Lightning hook that is called when a validation epoch ends."
-        #mAP = self.val_mAP.compute()  # get current val acc
-        #self.val_mAP_best(mAP)  # update best so far val acc
+       
         val_preds = torch.cat(self.val_predictions, dim=0)
         val_targets = torch.cat(self.val_targets, dim=0)
+        metric_dict = {'mAP': 0.0, 'acc': 0.0}
+        if torch.cuda.device_count() > 1:
+            gather_pred = [torch.zeros_like(val_preds) for _ in range(dist.get_world_size())]
+            gather_target = [torch.zeros_like(val_targets) for _ in range(dist.get_world_size())]
+            dist.barrier()
         
-        stats = calculate_stats(val_preds, val_targets)
-        mAP = np.mean([stat['AP'] for stat in stats])
-        #mAUC = np.mean(stats['AUC'])
-        acc = stats[0]['acc']
-        self.val_mAP_best(mAP)
-        self.log("val/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
-        # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
-        # otherwise metric would be reset by lightning after each epoch
-        self.log("val/mAP_best", self.val_mAP_best.compute(),prog_bar=True,sync_dist=True)
+        if torch.cuda.device_count() > 1:
+            dist.all_gather(gather_pred, val_preds)
+            dist.all_gather(gather_target, val_targets)
+
+            if dist.get_rank() == 0:
+                gather_pred = torch.cat(gather_pred, dim=0).cpu().detach().numpy()
+                gather_target = torch.cat(gather_target, dim=0).cpu().detach().numpy()
+                stats = calculate_stats(gather_pred, gather_target)
+                mAP = np.mean([stat['AP'] for stat in stats])
+                metric_dict['mAP'] = mAP
+                #self.val_mAP_best(mAP)
+            dist.barrier()
+
+            #self.log("val/mAP", mAP , on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+            self.val_mAP_best(metric_dict['mAP'])
+            self.log("val/mAP", metric_dict['mAP'], on_step=False, on_epoch=True, prog_bar=True,sync_dist=False)
+                #logging.info(f'Validation done for epoch {self.current_epoch}')
+            self.log("val/mAP_best", self.val_mAP_best.compute(), on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+            
+        
+        else:
+            stats = calculate_stats(val_preds.cpu().detach().numpy(), val_targets.cpu().detach().numpy())
+            mAP = np.mean([stat['AP'] for stat in stats])
+            acc = stats[0]['acc']
+            self.val_mAP_best(mAP)
+            self.log("val/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+            self.log("val/mAP_best", self.val_mAP_best.compute(), on_step=False, on_epoch=True, prog_bar=True)
+        
         self.val_predictions.clear()
         self.val_targets.clear()
-    
+        
+
+        
+
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
-        
-        """Perform a single test step on a batch of data from the test set.
 
-        :param batch: A batch of data (a tuple) containing the input tensor of images and target
-            labels.
-        :param batch_idx: The index of the current batch.
-        """
-
-        loss, preds, targets = self.model_step(batch)
-        
-        
-        preds_cpu = preds.cpu().detach()
-        target_cpu = targets.cpu().detach()
+        loss,preds,targets = self.model_step(batch)
+        preds_cpu = preds
+        target_cpu = targets
         self.test_predictions.append(preds_cpu)
         self.test_targets.append(target_cpu)
-
         # update and log metrics
+
         self.test_loss(loss)
-        
-        self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
-        #self.log("test/mAP", self.test_mAP, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
     
     def on_test_epoch_end(self) -> None:
-        """Lightning hook that is called when a test epoch ends."""
+        "Lightning hook that is called when a test epoch ends."
         test_preds = torch.cat(self.test_predictions, dim=0)
         test_targets = torch.cat(self.test_targets, dim=0)
-        stats = calculate_stats(test_preds, test_targets)
-        mAP = np.mean([stat['AP'] for stat in stats])
-        #mAUC = np.mean(stats['AUC'])
-        acc = stats[0]['acc']
-        
-        self.log("test/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True)
-        # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
-        # otherwise metric would be reset by lightning after each epoch
-        #self.log("val/mAP_best", self.val_mAP_best.compute(), sync_dist=True, prog_bar=True)
-        self.test_predictions.clear()
-        self.test_targets.clear()
+        metric_dict = {'mAP': 0.0, 'acc': 0.0}
+        if torch.cuda.device_count() > 1:
+            gather_pred = [torch.zeros_like(test_preds) for _ in range(dist.get_world_size())]
+            gather_target = [torch.zeros_like(test_targets) for _ in range(dist.get_world_size())]
+            dist.barrier()
+            dist.all_gather(gather_pred, test_preds)
+            dist.all_gather(gather_target, test_targets)
 
+            if dist.get_rank() == 0:
+                gather_pred = torch.cat(gather_pred, dim=0).cpu().detach().numpy()
+                gather_target = torch.cat(gather_target, dim=0).cpu().detach().numpy()
+                stats = calculate_stats(gather_pred, gather_target)
+                mAP = np.mean([stat['AP'] for stat in stats])
+                metric_dict['mAP'] = mAP
+                
+                logging.info(f'logging on rank {dist.get_rank()}')
+                logging.info(f'test_mAP: {mAP}')
+                self.log("test/mAP", mAP * float(dist.get_world_size()), on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+        else:
+            stats = calculate_stats(test_preds.cpu().detach().numpy(), test_targets.cpu().detach().numpy())
+            mAP = np.mean([stat['AP'] for stat in stats])
+            acc = stats[0]['acc']
+            self.log("test/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+        
+        return {'test_mAP': mAP}
+      
+        
     def setup(self, stage:str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
         test, or predict.
@@ -204,7 +249,16 @@ class TaggingModule(LightningModule):
         if self.hparams.compile and stage == "fit":
             self.net = torch.compile(self.net)
     
+    def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure):
+    # manually warm up lr without a scheduler
+        if self.trainer.global_step < 1000:
+            lr_scale = min(1.0, float(self.trainer.global_step + 1) / 1000.0)
+            for pg in optimizer.param_groups:
+                pg["lr"] = lr_scale * self.hparams.optimizer.keywords['lr']
 
+    # update params
+        optimizer.step(closure=optimizer_closure)
+        
     def configure_optimizers(self) -> Dict[str, Any]:
     #     """Choose what optimizers and learning-rate schedulers to use in your optimization.
     #     Normally you'd need one. But in the case of GANs or similar you might have multiple.
@@ -214,31 +268,11 @@ class TaggingModule(LightningModule):
 
     #     :return: A dict containing the configured optimizers and learning-rate schedulers to be used for training.
     #     """
-        if self.hparams.scheduler is not None:
-            def lr_foo(epoch):
-             
-             if epoch < 1:
-                 # warm up lr
-                 lr_scale = self.lr_rate[epoch]
-             else:
-                 # warmup schedule
-                lr_pos = int(-1 - bisect.bisect_left(self.lr_scheduler_epoch, epoch))
-                if lr_pos < -3:
-                    lr_scale = max(self.lr_rate[0] * (0.98 ** epoch), 0.03)
-                else:
-                    lr_scale = self.lr_rate[lr_pos]
-                    lr_scale = 0.95 ** epoch
-             return lr_scale
-
         
-        #optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
-        optimizer = torch.optim.lr_scheduler.LambdaLR(
-             optimizer,
-             lr_lambda=lr_foo
-        )
-
+        optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
         if self.hparams.scheduler is not None:
             scheduler = self.hparams.scheduler(optimizer=optimizer)
+            #scheduler = CosineLRScheduler(optimizer,t_initial=50, warmup_t=1, warmup_lr_init=1e-6)
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
@@ -249,6 +283,57 @@ class TaggingModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+            
+            
+                 
+                 
+              
+
+            #  if epoch < 3:
+            #      # warm up lr
+            #      lr_scale = self.lr_rate[epoch]
+            #      print(f'warmup lr_scale:{lr_scale}')
+            #  else:
+            #      # warmup schedule
+            #     lr_pos = int(-1 - bisect.bisect_left(self.lr_scheduler_epoch, epoch))
+            #     if lr_pos < -3:
+            #         lr_scale = max(self.lr_rate[0] * (0.98 ** epoch), 0.03)
+            #         print(f'nonwarmup first lr_scale:{lr_scale}')
+            #     else:
+            #         lr_scale = self.lr_rate[lr_pos]
+                    
+            #  return lr_scale
+            #scheduler = CosineLRScheduler(optimizer,t_initial=50, warmup_t=1, warmup_lr_init=1e-6,lr_min=1e-7)
+            #scheduler = StepLRScheduler(optimizer, decay_t=5, warmup_t=2, warmup_lr_init=5e-5, decay_rate=0.5)
+            #scheduler = torch.optim.lr_scheduler.LambdaLR( optimizer,  lr_lambda=lr_foo)
+            
+    
+    
+    
+    
+
+    
+
+        
+        # optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
+        
+
+        # if self.hparams.scheduler is not None:
+        #     scheduler = torch.optim.lr_scheduler.LambdaLR(
+        #      optimizer,
+        #      lr_lambda=lr_foo)
+        
+        #     #scheduler = self.hparams.scheduler(optimizer=optimizer)
+        #     return {
+        #         "optimizer": optimizer,
+        #         "lr_scheduler": {
+        #             "scheduler": scheduler,
+        #             "monitor": "val/loss",
+        #             "interval": "epoch",
+        #             "frequency": 1,
+        #         },
+        #     }
+        # return {"optimizer": optimizer}
         # if self.hparams.scheduler is not None:
             
         #     def lr_foo(epoch):

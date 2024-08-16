@@ -1,0 +1,60 @@
+_target_: src.models.tagging_module.TaggingModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 5e-4
+  weight_decay: 5e-7
+  eps: 1e-8
+  betas: [0.95, 0.999]
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.MultiStepLR
+  _partial_: true
+  milestones: [10,15,20,25,30,35,40]
+  gamma: 0.5
+
+#scheduler:
+#  _target_: torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+ 
+net:
+  _target_: src.models.components.LHGNN.LHGNN
+  k: 25 
+  act: 'gelu'
+  norm: 'batch'
+  bias: True
+  dropout: 0.0
+  dilation: True
+  epsilon: 0.2
+  drop_path: 0.1
+  size: 's'
+  num_class: 200
+  emb_dims: 1024
+  freq_num: 128
+  time_num: 1024
+  clusters: 50
+  cluster_ratio: 0.5
+  conv: 'lhg'
+  #k_dpc: 9
+  #cluster_method: 'soft-kmeans'
+  #refine_cluster: 'atnncheck'
+  #centroid_ratio: [0.25,0.25,0.25,0.25]
+  #conv: 'hypergraph'
+  #ffn: 'convffn'
+  #pooling_window: [8,4,2,1]
+  #reduce_ratio: [4,2,1,1]
+  #k_dpc: 9
+  #cluster_method: 'dpc'
+  #refine_cluster: true
+  #num_centroids: 100
+  #conv: 'hypergraph'
+  #ffn: 'ffn' #convffn
+
+# compile model for faster training with pytorch 2.0
+compile: false
+loss: 'bce'
+opt_warmup: True 
+learning_rate: 5e-4
+lr_rate:  [0.05, 0.02, 0.01,0.005,0.002,0.001,0.0005,0.0002]
+lr_scheduler_epoch: [10,15,20,25,30,35,50,45]
+

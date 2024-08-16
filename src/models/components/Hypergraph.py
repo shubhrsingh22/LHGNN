@@ -138,35 +138,35 @@ class DownSample(nn.Module):
         x = self.conv(x) 
         return x
 
-class GroupWiseLinear(nn.Module):
-    # could be changed to: 
-    # output = torch.einsum('ijk,zjk->ij', x, self.W)
-    # or output = torch.einsum('ijk,jk->ij', x, self.W[0])
-    def __init__(self, num_class, hidden_dim, bias=True):
-        super(GroupWiseLinear,self).__init__()
-        self.num_class = num_class
-        self.hidden_dim = hidden_dim
-        self.bias = bias
+# class GroupWiseLinear(nn.Module):
+#     # could be changed to: 
+#     # output = torch.einsum('ijk,zjk->ij', x, self.W)
+#     # or output = torch.einsum('ijk,jk->ij', x, self.W[0])
+#     def __init__(self, num_class, hidden_dim, bias=True):
+#         super(GroupWiseLinear,self).__init__()
+#         self.num_class = num_class
+#         self.hidden_dim = hidden_dim
+#         self.bias = bias
 
-        self.W = nn.Parameter(torch.Tensor(1, num_class, hidden_dim))
-        if bias:
-            self.b = nn.Parameter(torch.Tensor(1, num_class))
-        self.reset_parameters()
+#         self.W = nn.Parameter(torch.Tensor(1, num_class, hidden_dim))
+#         if bias:
+#             self.b = nn.Parameter(torch.Tensor(1, num_class))
+#         self.reset_parameters()
 
-    def reset_parameters(self):
-        stdv = 1. / math.sqrt(self.W.size(2))
-        for i in range(self.num_class):
-            self.W[0][i].data.uniform_(-stdv, stdv)
-        if self.bias:
-            for i in range(self.num_class):
-                self.b[0][i].data.uniform_(-stdv, stdv)
+#     def reset_parameters(self):
+#         stdv = 1. / math.sqrt(self.W.size(2))
+#         for i in range(self.num_class):
+#             self.W[0][i].data.uniform_(-stdv, stdv)
+#         if self.bias:
+#             for i in range(self.num_class):
+#                 self.b[0][i].data.uniform_(-stdv, stdv)
 
-    def forward(self, x):
-        # x: B,K,d
-        x = (self.W * x).sum(-1)
-        if self.bias:
-            x = x + self.b
-        return x
+#     def forward(self, x):
+#         # x: B,K,d
+#         x = (self.W * x).sum(-1)
+#         if self.bias:
+#             x = x + self.b
+#         return x
 
 
 class Transformer(nn.Module):
@@ -235,7 +235,7 @@ class HGCN(nn.Module):
         
 # Remove or replace the fully connected layer
         
-        self.proj = nn.Conv2d(512, self.channels[0], kernel_size=1, stride=1, padding=0)
+        
         self.conv = 'mr'
         reduce_ratios = [4,2,1,1]
         num_clusters = [int(x.item()) for x in torch.linspace(k,k,self.num_blocks)]
@@ -244,8 +244,8 @@ class HGCN(nn.Module):
         max_dilation = 128//max(num_clusters)
        
         self.stem = Stem_conv(1,self.channels[0],act=act)
-        self.query_embed = nn.Embedding(num_class, self.channels[-1])
-        self.label_proj = nn.Conv2d(self.channels[-1],1024, kernel_size=1)
+        
+        
         self.pos_embed = nn.Parameter(torch.zeros(1,self.channels[0],freq_num//4,time_num//4))
         self.HW = freq_num//4 * time_num//4 
 
@@ -302,7 +302,7 @@ class HGCN(nn.Module):
         
         x = self.prediction(x)
             
-        #preds = torch.sigmoid(x)
+        preds = torch.sigmoid(x)
         
         preds = preds.squeeze(-1).squeeze(-1)
         

@@ -61,9 +61,9 @@ class FSDDataModule(LightningDataModule):
         if not os.path.exists(self.json_path):
             os.mkdir(self.json_path)
         self.num_devices = int(num_devices)
-        self.train_json = self.json_path + 'train_files.json'
-        self.val_json = self.json_path + 'val_files.json'
-        self.eval_json = self.json_path + 'eval_files.json'
+        self.train_json = self.json_path + 'fsd_tr_full.json'
+        self.val_json = self.json_path + 'fsd_val_full.json'
+        self.eval_json = self.json_path + 'fsd_eval_full.json'
         self.audio_conf = {'sr':sr,'fmin':fmin,'fmax':fmax,'num_mels':num_mels,'window_type':window_type,'target_len':target_len,'freqm':freqm,'timem':timem,'norm_mean':norm_mean,'norm_std':norm_std,'mixup':mixup} 
         self.persistent_workers = persistent_workers
         
@@ -142,26 +142,26 @@ class FSDDataModule(LightningDataModule):
         
                 
                 
-    def prepare_data(self)-> None:
+    # def prepare_data(self)-> None:
         
         
 
-        if not os.path.exists(self.train_json) :
+    #     if not os.path.exists(self.train_json) :
 
-            print("Preparing JSON files for FSD")
+    #         print("Preparing JSON files for FSD")
             
-            dev_csv = np.loadtxt(os.path.join(self.meta_path,'dev.csv'),skiprows=1,dtype=str)
-            eval_csv = np.loadtxt(os.path.join(self.meta_path,'eval.csv'),skiprows=1,dtype=str)
-            tr_files,va_files,tr_cnt,va_cnt = self.process_metafiles(dev_csv,'train')
-            eval_files,eval_cnt = self.process_metafiles(eval_csv,'eval')
-            with open (self.train_json,'w') as f:
-                json.dump({'data':tr_files},f,indent=1)
-            with open (self.val_json,'w') as f:
-                json.dump({'data':va_files},f,indent=1)
-            with open (self.eval_json,'w') as f:
-                json.dump({'data':eval_files},f,indent=1)
-            import pdb; pdb.set_trace()
-            print("JSON files saved")
+    #         dev_csv = np.loadtxt(os.path.join(self.meta_path,'dev.csv'),skiprows=1,dtype=str)
+    #         eval_csv = np.loadtxt(os.path.join(self.meta_path,'eval.csv'),skiprows=1,dtype=str)
+    #         tr_files,va_files,tr_cnt,va_cnt = self.process_metafiles(dev_csv,'train')
+    #         eval_files,eval_cnt = self.process_metafiles(eval_csv,'eval')
+    #         with open (self.train_json,'w') as f:
+    #             json.dump({'data':tr_files},f,indent=1)
+    #         with open (self.val_json,'w') as f:
+    #             json.dump({'data':va_files},f,indent=1)
+    #         with open (self.eval_json,'w') as f:
+    #             json.dump({'data':eval_files},f,indent=1)
+    #         import pdb; pdb.set_trace()
+    #         print("JSON files saved")
     
     def setup(self,stage: Optional[str] = None)-> None:
         
@@ -190,8 +190,7 @@ class FSDDataModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            shuffle=self.sampler,
-            persistent_workers=self.persistent_workers) 
+            persistent_workers=self.persistent_workers,drop_last=True) 
     
     def val_dataloader(self)-> DataLoader[Any]:
 
@@ -202,15 +201,14 @@ class FSDDataModule(LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
             shuffle=False,
-            sampler=None,
-            persistent_workers=self.persistent_workers     
+            persistent_workers=self.persistent_workers,drop_last=True     
         )
     
     def test_dataloader(self) -> DataLoader[Any]:
         """Create and return the test dataloader. """
         #self.sampler = DistributedSampler(self.eval_dataset_dataset,shuffle=False) if self.num_devices > 1 else None
         
-        return DataLoader( dataset=self.eval_dataset,  batch_size=self.batch_size,  num_workers=self.num_workers,  pin_memory=self.pin_memory,  shuffle=False,sampler=self.sampler,persistent_workers=self.persistent_workers)
+        return DataLoader( dataset=self.eval_dataset,  batch_size=self.batch_size,  num_workers=self.num_workers,  pin_memory=self.pin_memory,  shuffle=False,persistent_workers=self.persistent_workers)
     
     
 

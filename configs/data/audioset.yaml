@@ -1,13 +1,13 @@
 # Description: Configuration file for FSD50K dataset 
 _target_: src.data.audioset_datamodule.AudioSetModule 
-json_path: ${paths.exp_dir}/datafiles/
+json_path: ${paths.meta_dir}/datafiles/
 data_dir: ${paths.data_dir}
 meta_path: ${paths.data_dir}/ground_truth
 label_csv_pth: ${paths.exp_dir}/datafiles/class_labels_indices.csv
 samplr_csv_pth: 
 balance_samplr: False
 batch_size: 15 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 16
+num_workers: 8
 pin_memory: True 
 persistent_workers: True
 sr: 16000

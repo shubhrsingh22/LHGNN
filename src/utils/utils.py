@@ -3,12 +3,45 @@ from importlib.util import find_spec
 from typing import Any, Callable, Dict, Optional, Tuple
 
 from omegaconf import DictConfig
-
-from src.utils import pylogger, rich_utils
+from pytorch_lightning import  LightningModule
+from utils import pylogger, rich_utils
+import torch 
+import torch.nn.functional as F
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
+def load_weights(model:LightningModule,cfg:Dict,pretrained:str):
 
+    state_dict = torch.load(cfg.get('ckpt_path'))['state_dict']
+    own_state = model.net.state_dict()
+
+    for name,param in state_dict.items():
+        if pretrained == "audioset":
+            model.net.load_state_dict(state_dict)
+            return
+        elif pretrained == 'img':
+            # Averaging across input channels from imagenet weights to get a single channel
+            if name == 'stem.convs.0.weight':
+                param = torch.mean(param, dim=1, keepdim=True)
+            
+            # Extrapolating positional embedding since image size and mel spectrogram size is not compatible
+            if 'pos_embed' in name:
+                param = F.interpolate(param, size=(cfg.data.get('num_mels') // 4, cfg.data.get('target_len') // 4), mode='bicubic', align_corners=False)
+            
+            if 'relative_pos' in name:
+                target_shape = own_state[name].shape[-2:]
+                h, w = target_shape
+                param = F.interpolate(param.unsqueeze(1), size=(h, w), mode='bicubic', align_corners=False).squeeze(1)
+            
+            if 'prediction' in name:
+                continue
+        
+            own_state[name].copy_(param)
+    model.net.load_state_dict(own_state)
+        
+
+
+    
 def extras(cfg: DictConfig) -> None:
     """Applies optional utilities before the task is started.
 

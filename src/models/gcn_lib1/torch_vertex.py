@@ -8,8 +8,52 @@ from .torch_edge import DenseDilatedKnnGraph,HyperedgeConstruction
 from .pos_embed import get_2d_relative_pos_embed
 import torch.nn.functional as F
 from timm.models.layers import DropPath
+import math
 
 
+
+
+class LHGConv2d(nn.Module):
+    """
+    Max-Relative Graph Convolution (Paper: https://arxiv.org/abs/1904.03751) for dense data type
+    """
+    def __init__(self, in_channels, out_channels, act='relu', norm=None, bias=True):
+        super(LHGConv2d, self).__init__()
+        self.nn = BasicConv([in_channels*3, out_channels], act, norm, bias)
+        self.get_centroids = HyperedgeConstruction(in_channels)
+        #self.nn_hyper = BasicConv([in_channels, in_channels], act, norm, bias)
+
+    def forward(self, x, edge_index, y=None,num_clusters=50,top_clusters=5, **kwargs):
+        
+        x_i = batched_index_select(x, edge_index[1])
+        if y is not None:
+            x_j = batched_index_select(y, edge_index[0])
+            
+        else:
+            x_j = batched_index_select(x, edge_index[0])
+        x_j, _ = torch.max(x_j - x_i, -1, keepdim=True)
+
+        centroids,weights = self.get_centroids(x,num_clusters)
+
+        
+        weights = weights.squeeze(-2)
+
+        _, nn_idx_centroid = torch.topk(weights, k=top_clusters, largest=True, dim=-1)
+
+        b, c, n, _ = x.shape
+        center_idx = torch.arange(0, n, device=x.device).repeat(b,top_clusters, 1).transpose(2, 1)
+        edge_idx = torch.stack((nn_idx_centroid, center_idx), dim=0)
+
+        x_j_cluster = batched_index_select(centroids.unsqueeze(-1), edge_idx[0])
+        x_i_cluster = batched_index_select(x, edge_idx[1])
+        
+        x_j_cluster,_ = torch.max(x_j_cluster - x_i_cluster, -1, keepdim=True)
+
+        x = torch.cat([x.unsqueeze(2), x_j.unsqueeze(2),x_j_cluster.unsqueeze(2)], dim=2).reshape(b, 3 * c, n, -1)
+        
+        return self.nn(x)
+        
+    
 class MRConv2d(nn.Module):
     """
     Max-Relative Graph Convolution (Paper: https://arxiv.org/abs/1904.03751) for dense data type
@@ -39,9 +83,9 @@ class MRConv2d(nn.Module):
         
         #n bcentroid = self.nn_hyper(centroid.unsqueeze(-1)).squeeze(-1)
         weights = weights.squeeze(-2)
-        _, nn_idx_centroid = torch.topk(weights, k=10, largest=True, dim=-1)
+        _, nn_idx_centroid = torch.topk(weights, k=12, largest=True, dim=-1)
         b, c, n, _ = x.shape
-        center_idx = torch.arange(0, n, device=x.device).repeat(b,10, 1).transpose(2, 1)
+        center_idx = torch.arange(0, n, device=x.device).repeat(b,12, 1).transpose(2, 1)
         edge_idx = torch.stack((nn_idx_centroid, center_idx), dim=0)
         x_j_center = batched_index_select(centroid.unsqueeze(-1), edge_idx[0])
         x_i_center = batched_index_select(x, edge_idx[1])
@@ -125,11 +169,13 @@ class GraphConv2d(nn.Module):
             self.gconv = GraphSAGE(in_channels, out_channels, act, norm, bias)
         elif conv == 'gin':
             self.gconv = GINConv2d(in_channels, out_channels, act, norm, bias)
+        elif conv == 'lhg':
+            self.gconv = LHGConv2d(in_channels, out_channels, act, norm, bias)
         else:
             raise NotImplementedError('conv:{} is not supported'.format(conv))
 
-    def forward(self, x, edge_index, y=None,num_centroids=50,H=None,W=None):
-        return self.gconv(x, edge_index, y,num_centroids,H,W)
+    def forward(self, x, edge_index, y=None,**kwargs):
+        return self.gconv(x, edge_index, y,**kwargs)
 
 
 class DyGraphConv2d(GraphConv2d):
@@ -144,7 +190,7 @@ class DyGraphConv2d(GraphConv2d):
         self.r = r
         self.dilated_knn_graph = DenseDilatedKnnGraph(kernel_size, dilation, stochastic, epsilon)
 
-    def forward(self, x, relative_pos=None,num_centroids=50):
+    def forward(self, x, relative_pos=None,**kwargs):
         B, C, H, W = x.shape
         y = None
         if self.r > 1:
@@ -152,7 +198,7 @@ class DyGraphConv2d(GraphConv2d):
             y = y.reshape(B, C, -1, 1).contiguous()            
         x = x.reshape(B, C, -1, 1).contiguous()
         edge_index = self.dilated_knn_graph(x, y, relative_pos)
-        x = super(DyGraphConv2d, self).forward(x, edge_index, y,num_centroids,H,W)
+        x = super(DyGraphConv2d, self).forward(x, edge_index, y,**kwargs)
         return x.reshape(B, -1, H, W).contiguous()
 
 
@@ -160,25 +206,29 @@ class Grapher(nn.Module):
     """
     Grapher module with graph convolution and fc layers
     """
-    def __init__(self, in_channels, kernel_size=9, dilation=1, conv='edge', act='relu', norm=None,
-                 bias=True,  stochastic=False, epsilon=0.0, r=1, n=196, drop_path=0.0, relative_pos=False,num_centroids=50):
+    def __init__(self, in_channels=1, num_knn=9,num_clusters=50, dilation=1, conv='edge', act='relu', norm=None,
+                 bias=True,  stochastic=False, epsilon=0.0, r=1, n=196, drop_path=0.0, relative_pos=False,cluster_ratio=0.5,channel_mul=1):
         super(Grapher, self).__init__()
         self.channels = in_channels
         self.n = n
         self.r = r
+        channel_mul= int(channel_mul)
+        self.conv = conv 
+        self.num_clusters = num_clusters
         self.fc1 = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
         )
-        self.graph_conv = DyGraphConv2d(in_channels, in_channels * 3, kernel_size, dilation, conv,
+        self.graph_conv = DyGraphConv2d(in_channels, in_channels * channel_mul, num_knn, dilation, conv,
                               act, norm, bias, stochastic, epsilon, r)
         self.fc2 = nn.Sequential(
-            nn.Conv2d(in_channels * 3, in_channels, 1, stride=1, padding=0),
+            nn.Conv2d(in_channels * channel_mul, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
         )
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.relative_pos = None
-        self.num_centroids = num_centroids
+        self.cluster_ratio = cluster_ratio
+        self.top_clusters = math.ceil(num_knn * cluster_ratio)
         if relative_pos:
             print('using relative_pos')
             relative_pos_tensor = torch.from_numpy(np.float32(get_2d_relative_pos_embed(in_channels,
@@ -200,7 +250,10 @@ class Grapher(nn.Module):
         x = self.fc1(x)
         B, C, H, W = x.shape
         relative_pos = self._get_relative_pos(self.relative_pos, H, W)
-        x = self.graph_conv(x, relative_pos,self.num_centroids)
+        if self.conv == 'lhg':
+            x = self.graph_conv(x, relative_pos,num_clusters=self.num_clusters, top_clusters=self.top_clusters)
+        else:
+            x = self.graph_conv(x,relative_pos)
         x = self.fc2(x)
         x = self.drop_path(x) + _tmp
         x = x.reshape(B, C, H, W)

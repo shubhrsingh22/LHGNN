@@ -10,7 +10,7 @@ from pytorch_lightning.utilities.rank_zero import rank_zero_only
 from omegaconf import DictConfig, OmegaConf, open_dict
 from rich.prompt import Prompt
 
-from src.utils import pylogger
+from utils import pylogger
 
 log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 

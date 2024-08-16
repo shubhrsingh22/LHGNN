@@ -9,73 +9,44 @@ import torch.nn.functional as F
 
 class HyperedgeConstruction(nn.Module):
 
-    def __init__(self,in_channels,cluster_type='soft-kmeans'):
+    def __init__(self,in_channels,num_iters=1):
 
         super(HyperedgeConstruction,self).__init__()
         self.in_channels = in_channels
-        self.cluster_type = cluster_type
         
-        if self.cluster_type == 'cosine':
-            self.sim_alpha = nn.Parameter(torch.ones(1))
-            self.sim_beta = nn.Parameter(torch.zeros(1))
-        
-        elif self.cluster_type == 'soft-kmeans':
-            self.num_iter = 1
-            self.centers_proposal = nn.AdaptiveAvgPool2d((5,10))
-        
+        self.num_iter = num_iters
         
     
-    def forward(self,x,num_centroids,intial_centroids):
+    def forward(self,x,num_centroids):
         """
         Args:   
         Inputs:
             x: (B,C,H,W) Input feature map
             centroids: (B,C,num_centroids) Pooled centroids
         Outputs:
-            hyperedges: (B,C,num_centroids) Hyperedge features
-            similarity: (B,H*W,1,num_centroids) Similarity matrix
-            calculated using cosine similarity/soft-kmeans/attention    
+            centroids: (B,C,num_centroids) 
+            weights: (B,H*W,1,num_centroids) soft assignment of each node to centroids
+                
         """
 
         b,c,h,w = x.shape
         
-        
-        if self.cluster_type == 'cosine':
-            x_r = x.reshape(b,c,-1)
-            similarity = torch.sigmoid(self.sim_beta + self.sim_alpha * pairwise_cos_sim(centroids.reshape(b,c,-1).permute(0,2,1), x_r.permute(0,2,1)))
-            # similarity matrix shape (B,num_centroids,H*W)
-            _, max_idx = similarity.max(dim=1, keepdim=True)
-            mask = torch.zeros_like(similarity)
-            mask.scatter_(1, max_idx, 1.)
-            
-            
-            similarity= similarity*mask
-            hyperedge_agg= ( x_r.permute(0,2,1).unsqueeze(dim=1)*similarity.unsqueeze(dim=-1) ).sum(dim=2)
-            
-            hyperedges = ( hyperedge_agg + centroids.permute(0,2,1))/ (mask.sum(dim=-1,keepdim=True)+ 1.0)
-            return hyperedges,similarity
-            
-        elif self.cluster_type == 'soft-kmeans':
-            x_copy = x.reshape(b,c,h,w)
-            #centroids = self.centers_proposal(x_copy).reshape(b,c,-1)
-            x = x.reshape(b,h*w,c)
-            m =2 
-            #b,c,num_centroids = centroids.shape
-            with torch.no_grad():
-                #centroids = centroids.detach()
-                centroids = torch.randn((b, c, num_centroids), device=x.device, dtype=x.dtype)
-                #centroids = centroids.detach()
-                #centroids = intial_centroids
-                for i in range(self.num_iter):
-                    dist_to_centers = torch.cdist(x, centroids.transpose(1, 2))
-                    inv_dist = 1.0 / (dist_to_centers + 1e-10)
-                    power = 2 / (m - 1)
-                    membership = (inv_dist / inv_dist.sum(dim=-1, keepdim=True)).pow(power)
-                    weights = membership.pow(m).unsqueeze(2)
-                    centroids = torch.sum(weights * x.unsqueeze(-1), dim=1) / weights.sum(dim=1)
-                    hyperedges = centroids.clone()
-                return hyperedges,weights
+        x_copy = x.reshape(b,c,h,w)
+        x = x.reshape(b,h*w,c)
+        m=2
 
+        with torch.no_grad():
+            centroids = torch.randn((b, c, num_centroids), device=x.device, dtype=x.dtype)
+            for i in range(self.num_iter):
+                dist_to_centers = torch.cdist(x, centroids.transpose(1, 2))
+                inv_dist = 1.0 / (dist_to_centers + 1e-10)
+                power = 2 / (m - 1)
+                membership = (inv_dist / inv_dist.sum(dim=-1, keepdim=True)).pow(power)
+                weights = membership.pow(m).unsqueeze(2)
+                centroids = torch.sum(weights * x.unsqueeze(-1), dim=1) / weights.sum(dim=1)
+            return centroids,weights
+            
+        
 def pairwise_distance(x):
     """
     Compute pairwise distance of a point cloud.

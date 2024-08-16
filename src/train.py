@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
-
+import sys
 import hydra
 #import lightning as L
 import pytorch_lightning as pl
@@ -15,13 +15,15 @@ import torch.nn as nn
 import os
 import sys
 from lightning.pytorch.tuner import Tuner
-print(sys.path)
+from utils.utils import load_weights
+
+import logging 
 
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True,cwd=False)
-os.environ['NCCL_P2P_DISABLE'] = '1'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
-os.environ["WANDB__SERVICE_WAIT"] = "300"
+#os.environ['NCCL_P2P_DISABLE'] = '1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
+#os.environ["WANDB__SERVICE_WAIT"] = "300"
 # ------------------------------------------------------------------------------------ #
 # the setup_root above is equivalent to:
 # - adding project root dir to PYTHONPATH
@@ -52,6 +54,7 @@ from src.utils import (
 log = RankedLogger(__name__, rank_zero_only=True)
 
 
+
 @task_wrapper
 def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
@@ -64,7 +67,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :return: A tuple with metrics and dict with all instantiated objects.
     """
     # set seed for random number generators in pytorch, numpy and python.random
-    print("In train")
+    
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
@@ -74,49 +77,17 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating model <{cfg.model._target_}>")
     
     model: LightningModule = hydra.utils.instantiate(cfg.model)
-
-    if cfg.get('pretrained'):
-
-        state_dict = torch.load(cfg.get('ckpt_path'))['state_dict']
     
+    pretrained = cfg.get('pretrained')
+
+    if pretrained in ['audioset','img']:
+
+        load_weights(model,cfg,pretrained)
+        log.info("Loading {} pretrained weights".format(pretrained))
+    else:
+        log.info(f"Training from scratch")
     
 
-        own_state = model.net.state_dict()
-    
-        for name, param in state_dict.items():
-        
-        
-            if name == 'stem.convs.0.weight':
-            
-                param = torch.mean(param,dim=1,keepdim=True)
-        
-            if 'pos_embed' in name:
-            
-                param = F.interpolate(param, size=(cfg.data.get('num_mels') // 4,cfg.data.get('target_len') // 4), mode='bicubic', align_corners=False)
-                        
-            if 'relative_pos' in name:
-
-                target_shape = own_state[name].shape[-2:]
-                h = own_state[name].shape[1]
-                w = own_state[name].shape[2]
-                param = F.interpolate(param.unsqueeze(1), size=(h,w), mode='bicubic', align_corners=False).squeeze(1)
-        
-            if 'prediction' in name:
-                continue
-
-            own_state[name].copy_(param)
-    
-        model.net.load_state_dict(own_state)
-    
-   # model.net._modules['prediction'][-1] = nn.Conv2d(1024,cfg.model.net.get('num_class'),1,bias=True)
-
-
-
-
-     
-    # print(state_dict.keys())
-    # Add 'net.' prefix to every key
-   # model.net.load_state_dict(torch.load(cfg.get('ckpt_path')),strict=True)
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
 
@@ -125,12 +96,7 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
-    #tuner = Tuner(trainer)
-    
-    #lr_finder = tuner.lr_find(model,datamodule)
-    #new_lr = lr_finder.suggestion()
-    #print(new_lr)
-    #model.hyparams.lr = new_lr
+
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
@@ -139,35 +105,33 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         "callbacks": callbacks,
         "trainer": trainer,
     }
-
     if logger:
         log.info("Logging hyperparameters!")
         log_hyperparameters(object_dict)
+    
 
-    if cfg.get("train"):
-        log.info("Starting training!")
+    log.info("Starting training!")
 
-        log.info("Finding optimal learning rate!")
-        trainer.fit(model=model, datamodule=datamodule)
+    trainer.fit(model=model, datamodule=datamodule)
 
     train_metrics = trainer.callback_metrics
-    
-    
+    log.info(f"Training completed!")
 
-        
-    if cfg.get("test"):
-        log.info("Starting testing for single model!")
+    # Evaluate model on test set with best weights
+
+    if cfg.get("eval"):
+        log.info("Evaluating  for single model!")
         ckpt_path = trainer.checkpoint_callback.best_model_path
-
-        if ckpt_path == "":
-            log.warning("Best ckpt not found! Using current weights for testing...")
-            ckpt_path = None
+        ckpt = torch.load(ckpt_path)
+        model.load_state_dict(ckpt['state_dict'],strict=True)
+        
         test_results = trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
-        log.info(f"Best ckpt path: {ckpt_path}")
-
-    if cfg.get('wa'):
-            
-        log.info("Weighted average model")
+        logging.info(f"Test results: {test_results['mAP']}")
+        log.info(f"Test mAP: {test_results['mAP']}")
+    # Weighted Average Model 
+        
+    if cfg.get("wa"):
+        log.info("Evaluating with weighted average model")
         model_ckpt = []
         ckpt_dir = cfg.callbacks.get('model_checkpoint').get('dirpath')
         
@@ -186,22 +150,20 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
             own_state[name].copy_(torch.mean(model_ckpt_key,dim=0))
         
         model.load_state_dict(own_state)
-        log.info("Starting testing for weighted average model!")
+        
         test_results_wa = trainer.test(model=model, datamodule=datamodule)
+        log.info(f"Test results from weighted average model: {test_results_wa['mAP']}")
+        logging.info(f"Test mAP from weighted average model: {test_results_wa['mAP']}")
         torch.save(model.net.state_dict(),os.path.join(ckpt_dir,'wa.pth.tar'))
-        log.info(f"Weighted average results : {test_results['test/mAP']}")
-        logger.log('weighted test/mAP',test_results_wa['test/mAP'])
-
-    test_metrics = trainer.callback_metrics
+    
+    metrics = trainer.callback_metrics
 
     # merge train and test metrics
     #metric_dict = {**train_metrics, **test_metrics}
 
     #return metric_dict, object_dict
-    return train_metrics,object_dict
+    return metrics,object_dict
 
-    
-        
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
@@ -215,9 +177,10 @@ def main(cfg: DictConfig) -> Optional[float]:
     # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
     print("In main")
     extras(cfg)
-    train(cfg)
+    log.info("In train")
+    metrics,_ = train(cfg)
     # train the model
-    metric_dict, _ = train(cfg)
+    
 
     # safely retrieve metric value for hydra-based hyperparameter optimization
     #metric_value = get_metric_value(
