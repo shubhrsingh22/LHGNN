@@ -14,7 +14,7 @@ LHGNN is a Python-based implementation of Local-Higher Order Graph Neural Networ
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
 
-##Project Structure 
+## Project Structure 
 ├── .github                   <- Github Actions workflows
 │
 ├── configs                   <- Hydra configs
