@@ -14,11 +14,7 @@ LHGNN is a Python-based implementation of Local-Higher Order Graph Neural Networ
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
 
-## Features
-- **Higher-Order Graph Representation**: Utilizes local higher-order relationships to improve node representation.
-- **Flexible Architecture**: Easily extendable for various graph-based tasks.
-- **Performance Metrics**: Built-in evaluation metrics for assessing model performance.
-- **Compatibility**: Works seamlessly with popular graph libraries like NetworkX and PyTorch Geometric.
+
 
 ## Installation
 To set up the project, follow these steps:
