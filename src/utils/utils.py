@@ -12,7 +12,7 @@ log = pylogger.RankedLogger(__name__, rank_zero_only=True)
 
 def load_weights(model:LightningModule,cfg:Dict,pretrained:str):
 
-    state_dict = torch.load(cfg.get('ckpt_path'))['state_dict']
+    state_dict = torch.load(cfg.get('pretrain_path'))['state_dict']
     own_state = model.net.state_dict()
 
     for name,param in state_dict.items():

@@ -1,0 +1,654 @@
+Variable OMP_NUM_THREADS has been set to 12
+--------------------
+Hostname: sbg20
+Tue Aug 13 18:28:42 BST 2024
+Free GPU: 0 of 1
+--------------------
+GPU0: [92mNot in use.[39m
+
+User: [91macw572[39m JobID: [91m3789981[39m GPU Allocation: [91m1[39m Queue: [91mall.q[39m
+User: [91macw753[39m JobID: [91m3789272[39m GPU Allocation: [91m2[39m Queue: [91mall.q[39m
+User: [91macw778[39m JobID: [91m3786024[39m GPU Allocation: [91m1[39m Queue: [91mall.q[39m
+[91mWarning! GPUs requested but not used![39m
+In main
+[[36m2024-08-13 18:29:33,379[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>[0m
+[[36m2024-08-13 18:29:33,384[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>[0m
+CONFIG
+├── data
+│   └── _target_: src.data.fsd_datamodule.FSDDataModule                         
+│       json_path: /data/scratch/acw572/LHGNN/datafiles/                        
+│       data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet              
+│       meta_path: /data/EECS-MachineListeningLab/datasets/AudioSet/ground_truth
+│       label_csv_pth: /data/scratch/acw572/LHGNN/datafiles/class_labels_indices
+│       samplr_csv_pth: /data/scratch/acw572/LHGNN/datafiles/fsd50k_tr_full_weig
+│       balance_samplr: true                                                    
+│       batch_size: 15                                                          
+│       num_workers: 8                                                          
+│       pin_memory: true                                                        
+│       persistent_workers: true                                                
+│       sr: 16000                                                               
+│       fmin: 20                                                                
+│       fmax: 8000                                                              
+│       num_mels: 128                                                           
+│       window_type: hanning                                                    
+│       target_len: 1024                                                        
+│       freqm: 48                                                               
+│       timem: 192                                                              
+│       mixup: 0.5                                                              
+│       norm_mean: -4.6476                                                      
+│       norm_std: 4.5699                                                        
+│       num_devices: 1                                                          
+│                                                                               
+├── model
+│   └── _target_: src.models.tagging_module_test.TaggingModule                  
+│       optimizer:                                                              
+│         _target_: torch.optim.Adam                                            
+│         _partial_: true                                                       
+│         lr: 0.0005                                                            
+│         weight_decay: 5.0e-07                                                 
+│         eps: 1.0e-08                                                          
+│         betas:                                                                
+│         - 0.95                                                                
+│         - 0.999                                                               
+│       scheduler:                                                              
+│         _target_: torch.optim.lr_scheduler.MultiStepLR                        
+│         _partial_: true                                                       
+│         milestones:                                                           
+│         - 10                                                                  
+│         - 15                                                                  
+│         - 20                                                                  
+│         - 25                                                                  
+│         - 30                                                                  
+│         - 35                                                                  
+│         - 40                                                                  
+│         gamma: 0.5                                                            
+│       net:                                                                    
+│         _target_: src.models.components.Hypergraph.HGCN                       
+│         k: 25                                                                 
+│         act: gelu                                                             
+│         norm: batch                                                           
+│         bias: true                                                            
+│         dropout: 0.0                                                          
+│         dilation: true                                                        
+│         epsilon: 0.2                                                          
+│         drop_path: 0.1                                                        
+│         size: s                                                               
+│         num_class: 200                                                        
+│         emb_dims: 1024                                                        
+│         freq_num: 128                                                         
+│         time_num: 1024                                                        
+│       compile: false                                                          
+│       loss: bce                                                               
+│       opt_warmup: true                                                        
+│       learning_rate: 0.0005                                                   
+│       lr_rate:                                                                
+│       - 0.05                                                                  
+│       - 0.02                                                                  
+│       - 0.01                                                                  
+│       - 0.005                                                                 
+│       - 0.002                                                                 
+│       - 0.001                                                                 
+│       - 0.0005                                                                
+│       - 0.0002                                                                
+│       lr_scheduler_epoch:                                                     
+│       - 10                                                                    
+│       - 15                                                                    
+│       - 20                                                                    
+│       - 25                                                                    
+│       - 30                                                                    
+│       - 35                                                                    
+│       - 50                                                                    
+│       - 45                                                                    
+│                                                                               
+├── callbacks
+│   └── model_checkpoint:                                                       
+│         _target_: pytorch_lightning.callbacks.ModelCheckpoint                 
+│         dirpath: /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-13_18-29-3
+│         filename: epoch_{epoch:03d}                                           
+│         monitor: val/mAP                                                      
+│         verbose: false                                                        
+│         save_last: true                                                       
+│         save_top_k: 20                                                        
+│         mode: max                                                             
+│         auto_insert_metric_name: false                                        
+│         save_weights_only: false                                              
+│         every_n_train_steps: null                                             
+│         train_time_interval: null                                             
+│         every_n_epochs: null                                                  
+│         save_on_train_epoch_end: null                                         
+│       early_stopping:                                                         
+│         _target_: pytorch_lightning.callbacks.EarlyStopping                   
+│         monitor: val/loss                                                     
+│         min_delta: 0.0                                                        
+│         patience: 5                                                           
+│         verbose: false                                                        
+│         mode: min                                                             
+│         strict: true                                                          
+│         check_finite: true                                                    
+│         stopping_threshold: null                                              
+│         divergence_threshold: null                                            
+│         check_on_train_epoch_end: null                                        
+│       model_summary:                                                          
+│         _target_: pytorch_lightning.callbacks.RichModelSummary                
+│         max_depth: -1                                                         
+│       rich_progress_bar:                                                      
+│         _target_: pytorch_lightning.callbacks.RichProgressBar                 
+│                                                                               
+├── logger
+│   └── wandb:                                                                  
+│         _target_: pytorch_lightning.loggers.WandbLogger                       
+│         save_dir: /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-13_18-29-
+│         offline: false                                                        
+│         id: null                                                              
+│         anonymous: null                                                       
+│         project: audioset-bal                                                 
+│         log_model: false                                                      
+│         prefix: ''                                                            
+│         group: Tagging                                                        
+│         tags:                                                                 
+│         - fsd                                                                 
+│         - hgcn                                                                
+│         job_type: ''                                                          
+│                                                                               
+├── trainer
+│   └── _target_: pytorch_lightning.trainer.Trainer                             
+│       default_root_dir: /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-13_
+│       num_sanity_val_steps: 0                                                 
+│       min_epochs: 30                                                          
+│       max_epochs: 50                                                          
+│       accelerator: gpu                                                        
+│       devices: 1                                                              
+│       gradient_clip_val: 0.5                                                  
+│       precision: 32                                                           
+│       detect_anomaly: false                                                   
+│       check_val_every_n_epoch: 1                                              
+│       deterministic: false                                                    
+│       strategy: auto                                                          
+│       num_nodes: 1                                                            
+│       sync_batchnorm: false                                                   
+│       use_distributed_sampler: false                                          
+│                                                                               
+├── paths
+│   └── root_dir: /data/home/acw572/hgann/HGANN                                 
+│       exp_dir: /data/scratch/acw572                                           
+│       data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet              
+│       meta_dir: /data/EECS-MachineListeningLab/shubhr/hgann                   
+│       log_dir: /data/scratch/acw572/LHGNN/logs/                               
+│       output_dir: /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-13_18-29-
+│       work_dir: /data/home/acw572/hgann/HGANN                                 
+│                                                                               
+├── extras
+│   └── ignore_warnings: false                                                  
+│       enforce_tags: true                                                      
+│       print_config: true                                                      
+│                                                                               
+├── task_name
+│   └── train                                                                   
+├── pretrained
+│   └── img                                                                     
+├── tags
+│   └── ['dev']                                                                 
+├── train
+│   └── True                                                                    
+├── eval
+│   └── True                                                                    
+├── wa
+│   └── True                                                                    
+├── ckpt_path
+│   └── /data/EECS-MachineListeningLab/shubhr/imagenet_weights/model_best.pth.ta
+└── seed
+    └── None                                                                    
+[[36m2024-08-13 18:29:33,497[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] In train[0m
+[[36m2024-08-13 18:29:33,497[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating datamodule <src.data.fsd_datamodule.FSDDataModule>[0m
+[[36m2024-08-13 18:29:34,902[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating model <src.models.tagging_module_test.TaggingModule>[0m
+/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/pytorch_lightning/utilities/parsing.py:198: Attribute 'net' is an instance of `nn.Module` and is already saved during checkpointing. It is recommended to ignore them using `self.save_hyperparameters(ignore=['net'])`.
+norm is batch
+bias is True
+drop_path is 0.1
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+[[36m2024-08-13 18:29:59,997[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Loading img pretrained weights[0m
+[[36m2024-08-13 18:29:59,998[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating callbacks...[0m
+[[36m2024-08-13 18:29:59,998[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.ModelCheckpoint>[0m
+[[36m2024-08-13 18:30:00,003[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.EarlyStopping>[0m
+[[36m2024-08-13 18:30:00,004[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.RichModelSummary>[0m
+[[36m2024-08-13 18:30:00,005[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.RichProgressBar>[0m
+[[36m2024-08-13 18:30:00,005[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating loggers...[0m
+[[36m2024-08-13 18:30:00,006[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating logger <pytorch_lightning.loggers.WandbLogger>[0m
+[[36m2024-08-13 18:30:00,171[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating trainer <pytorch_lightning.trainer.Trainer>[0m
+Trainer already configured with model summary callbacks: [<class 'pytorch_lightning.callbacks.rich_model_summary.RichModelSummary'>]. Skipping setting a default `ModelSummary` callback.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+IPU available: False, using: 0 IPUs
+HPU available: False, using: 0 HPUs
+[[36m2024-08-13 18:30:00,394[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Logging hyperparameters![0m
+wandb: Currently logged in as: shubhr. Use `wandb login --relogin` to force relogin
+wandb: wandb version 0.17.6 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.1
+wandb: Run data is saved locally in /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-13_18-29-33/wandb/run-20240813_183004-evzlul3x
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run resilient-glitter-22
+wandb: ⭐️ View project at https://wandb.ai/shubhr/audioset-bal
+wandb: 🚀 View run at https://wandb.ai/shubhr/audioset-bal/runs/evzlul3x
+[[36m2024-08-13 18:30:21,943[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Starting training![0m
+You are using a CUDA device ('NVIDIA A100-PCIE-40GB') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━┳━━┓
+┃   ┃ Name                                                              ┃ … ┃  ┃
+┡━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━╇━━┩
+│ 0 │ net                                                               │ … │  │
+│ 1 │ net.proj                                                          │ … │  │
+│ 2 │ net.stem                                                          │ … │  │
+│ 3 │ net.stem.convs                                                    │ … │  │
+│ 4 │ net.stem.convs.0                                                  │ … │  │
+│ 5 │ net.stem.convs.1                                                  │ … │  │
+│ 6 │ net.stem.convs.2                                                  │ … │  │
+│ 7 │ net.stem.convs.3                                                  │ … │  │
+│ 8 │ net.stem.convs.4                                                  │ … │  │
+│ 9 │ net.stem.convs.5                                                  │ … │  │
+│ … │ net.stem.convs.6                                                  │ … │  │
+│ … │ net.stem.convs.7                                                  │ … │  │
+│ … │ net.query_embed                                                   │ … │  │
+│ … │ net.label_proj                                                    │ … │  │
+│ … │ net.backbone                                                      │ … │  │
+│ … │ net.backbone.0                                                    │ … │  │
+│ … │ net.backbone.0.0                                                  │ … │  │
+│ … │ net.backbone.0.0.fc1                                              │ … │  │
+│ … │ net.backbone.0.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.0.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.0.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.0.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.0.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.0.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.0.0.fc2                                              │ … │  │
+│ … │ net.backbone.0.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.0.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.0.0.drop_path                                        │ … │  │
+│ … │ net.backbone.0.1                                                  │ … │  │
+│ … │ net.backbone.0.1.fc1                                              │ … │  │
+│ … │ net.backbone.0.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.0.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.0.1.act                                              │ … │  │
+│ … │ net.backbone.0.1.fc2                                              │ … │  │
+│ … │ net.backbone.0.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.0.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.0.1.conv                                             │ … │  │
+│ … │ net.backbone.0.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.0.1.drop_path                                        │ … │  │
+│ … │ net.backbone.1                                                    │ … │  │
+│ … │ net.backbone.1.0                                                  │ … │  │
+│ … │ net.backbone.1.0.fc1                                              │ … │  │
+│ … │ net.backbone.1.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.1.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.1.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.1.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.1.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.1.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.1.0.fc2                                              │ … │  │
+│ … │ net.backbone.1.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.1.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.1.0.drop_path                                        │ … │  │
+│ … │ net.backbone.1.1                                                  │ … │  │
+│ … │ net.backbone.1.1.fc1                                              │ … │  │
+│ … │ net.backbone.1.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.1.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.1.1.act                                              │ … │  │
+│ … │ net.backbone.1.1.fc2                                              │ … │  │
+│ … │ net.backbone.1.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.1.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.1.1.conv                                             │ … │  │
+│ … │ net.backbone.1.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.1.1.drop_path                                        │ … │  │
+│ … │ net.backbone.2                                                    │ … │  │
+│ … │ net.backbone.2.conv                                               │ … │  │
+│ … │ net.backbone.2.conv.0                                             │ … │  │
+│ … │ net.backbone.2.conv.1                                             │ … │  │
+│ … │ net.backbone.3                                                    │ … │  │
+│ … │ net.backbone.3.0                                                  │ … │  │
+│ … │ net.backbone.3.0.fc1                                              │ … │  │
+│ … │ net.backbone.3.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.3.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.3.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.3.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.3.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.3.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.3.0.fc2                                              │ … │  │
+│ … │ net.backbone.3.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.3.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.3.0.drop_path                                        │ … │  │
+│ … │ net.backbone.3.1                                                  │ … │  │
+│ … │ net.backbone.3.1.fc1                                              │ … │  │
+│ … │ net.backbone.3.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.3.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.3.1.act                                              │ … │  │
+│ … │ net.backbone.3.1.fc2                                              │ … │  │
+│ … │ net.backbone.3.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.3.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.3.1.conv                                             │ … │  │
+│ … │ net.backbone.3.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.3.1.drop_path                                        │ … │  │
+│ … │ net.backbone.4                                                    │ … │  │
+│ … │ net.backbone.4.0                                                  │ … │  │
+│ … │ net.backbone.4.0.fc1                                              │ … │  │
+│ … │ net.backbone.4.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.4.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.4.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.4.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.4.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.4.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.4.0.fc2                                              │ … │  │
+│ … │ net.backbone.4.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.4.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.4.0.drop_path                                        │ … │  │
+│ … │ net.backbone.4.1                                                  │ … │  │
+│ … │ net.backbone.4.1.fc1                                              │ … │  │
+│ … │ net.backbone.4.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.4.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.4.1.act                                              │ … │  │
+│ … │ net.backbone.4.1.fc2                                              │ … │  │
+│ … │ net.backbone.4.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.4.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.4.1.conv                                             │ … │  │
+│ … │ net.backbone.4.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.4.1.drop_path                                        │ … │  │
+│ … │ net.backbone.5                                                    │ … │  │
+│ … │ net.backbone.5.conv                                               │ … │  │
+│ … │ net.backbone.5.conv.0                                             │ … │  │
+│ … │ net.backbone.5.conv.1                                             │ … │  │
+│ … │ net.backbone.6                                                    │ … │  │
+│ … │ net.backbone.6.0                                                  │ … │  │
+│ … │ net.backbone.6.0.fc1                                              │ … │  │
+│ … │ net.backbone.6.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.6.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.6.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.6.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.6.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.6.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.6.0.fc2                                              │ … │  │
+│ … │ net.backbone.6.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.6.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.6.0.drop_path                                        │ … │  │
+│ … │ net.backbone.6.1                                                  │ … │  │
+│ … │ net.backbone.6.1.fc1                                              │ … │  │
+│ … │ net.backbone.6.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.6.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.6.1.act                                              │ … │  │
+│ … │ net.backbone.6.1.fc2                                              │ … │  │
+│ … │ net.backbone.6.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.6.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.6.1.conv                                             │ … │  │
+│ … │ net.backbone.6.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.6.1.drop_path                                        │ … │  │
+│ … │ net.backbone.7                                                    │ … │  │
+│ … │ net.backbone.7.0                                                  │ … │  │
+│ … │ net.backbone.7.0.fc1                                              │ … │  │
+│ … │ net.backbone.7.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.7.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.7.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.7.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.7.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.7.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.7.0.fc2                                              │ … │  │
+│ … │ net.backbone.7.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.7.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.7.0.drop_path                                        │ … │  │
+│ … │ net.backbone.7.1                                                  │ … │  │
+│ … │ net.backbone.7.1.fc1                                              │ … │  │
+│ … │ net.backbone.7.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.7.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.7.1.act                                              │ … │  │
+│ … │ net.backbone.7.1.fc2                                              │ … │  │
+│ … │ net.backbone.7.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.7.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.7.1.conv                                             │ … │  │
+│ … │ net.backbone.7.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.7.1.drop_path                                        │ … │  │
+│ … │ net.backbone.8                                                    │ … │  │
+│ … │ net.backbone.8.0                                                  │ … │  │
+│ … │ net.backbone.8.0.fc1                                              │ … │  │
+│ … │ net.backbone.8.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.8.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.8.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.8.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.8.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.8.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.8.0.fc2                                              │ … │  │
+│ … │ net.backbone.8.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.8.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.8.0.drop_path                                        │ … │  │
+│ … │ net.backbone.8.1                                                  │ … │  │
+│ … │ net.backbone.8.1.fc1                                              │ … │  │
+│ … │ net.backbone.8.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.8.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.8.1.act                                              │ … │  │
+│ … │ net.backbone.8.1.fc2                                              │ … │  │
+│ … │ net.backbone.8.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.8.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.8.1.conv                                             │ … │  │
+│ … │ net.backbone.8.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.8.1.drop_path                                        │ … │  │
+│ … │ net.backbone.9                                                    │ … │  │
+│ … │ net.backbone.9.0                                                  │ … │  │
+│ … │ net.backbone.9.0.fc1                                              │ … │  │
+│ … │ net.backbone.9.0.fc1.0                                            │ … │  │
+│ … │ net.backbone.9.0.fc1.1                                            │ … │  │
+│ … │ net.backbone.9.0.graph_conv                                       │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv                                 │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv.nn                              │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv.nn.0                            │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv.nn.1                            │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv.nn.2                            │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv.get_centroids                   │ … │  │
+│ … │ net.backbone.9.0.graph_conv.gconv.get_centroids.centers_proposal  │ … │  │
+│ … │ net.backbone.9.0.graph_conv.dilated_knn_graph                     │ … │  │
+│ … │ net.backbone.9.0.graph_conv.dilated_knn_graph._dilated            │ … │  │
+│ … │ net.backbone.9.0.fc2                                              │ … │  │
+│ … │ net.backbone.9.0.fc2.0                                            │ … │  │
+│ … │ net.backbone.9.0.fc2.1                                            │ … │  │
+│ … │ net.backbone.9.0.drop_path                                        │ … │  │
+│ … │ net.backbone.9.1                                                  │ … │  │
+│ … │ net.backbone.9.1.fc1                                              │ … │  │
+│ … │ net.backbone.9.1.fc1.0                                            │ … │  │
+│ … │ net.backbone.9.1.fc1.1                                            │ … │  │
+│ … │ net.backbone.9.1.act                                              │ … │  │
+│ … │ net.backbone.9.1.fc2                                              │ … │  │
+│ … │ net.backbone.9.1.fc2.0                                            │ … │  │
+│ … │ net.backbone.9.1.fc2.1                                            │ … │  │
+│ … │ net.backbone.9.1.conv                                             │ … │  │
+│ … │ net.backbone.9.1.conv.conv                                        │ … │  │
+│ … │ net.backbone.9.1.drop_path                                        │ … │  │
+│ … │ net.backbone.10                                                   │ … │  │
+│ … │ net.backbone.10.0                                                 │ … │  │
+│ … │ net.backbone.10.0.fc1                                             │ … │  │
+│ … │ net.backbone.10.0.fc1.0                                           │ … │  │
+│ … │ net.backbone.10.0.fc1.1                                           │ … │  │
+│ … │ net.backbone.10.0.graph_conv                                      │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv                                │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv.nn                             │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv.nn.0                           │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv.nn.1                           │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv.nn.2                           │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv.get_centroids                  │ … │  │
+│ … │ net.backbone.10.0.graph_conv.gconv.get_centroids.centers_proposal │ … │  │
+│ … │ net.backbone.10.0.graph_conv.dilated_knn_graph                    │ … │  │
+│ … │ net.backbone.10.0.graph_conv.dilated_knn_graph._dilated           │ … │  │
+│ … │ net.backbone.10.0.fc2                                             │ … │  │
+│ … │ net.backbone.10.0.fc2.0                                           │ … │  │
+│ … │ net.backbone.10.0.fc2.1                                           │ … │  │
+│ … │ net.backbone.10.0.drop_path                                       │ … │  │
+│ … │ net.backbone.10.1                                                 │ … │  │
+│ … │ net.backbone.10.1.fc1                                             │ … │  │
+│ … │ net.backbone.10.1.fc1.0                                           │ … │  │
+│ … │ net.backbone.10.1.fc1.1                                           │ … │  │
+│ … │ net.backbone.10.1.act                                             │ … │  │
+│ … │ net.backbone.10.1.fc2                                             │ … │  │
+│ … │ net.backbone.10.1.fc2.0                                           │ … │  │
+│ … │ net.backbone.10.1.fc2.1                                           │ … │  │
+│ … │ net.backbone.10.1.conv                                            │ … │  │
+│ … │ net.backbone.10.1.conv.conv                                       │ … │  │
+│ … │ net.backbone.10.1.drop_path                                       │ … │  │
+│ … │ net.backbone.11                                                   │ … │  │
+│ … │ net.backbone.11.0                                                 │ … │  │
+│ … │ net.backbone.11.0.fc1                                             │ … │  │
+│ … │ net.backbone.11.0.fc1.0                                           │ … │  │
+│ … │ net.backbone.11.0.fc1.1                                           │ … │  │
+│ … │ net.backbone.11.0.graph_conv                                      │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv                                │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv.nn                             │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv.nn.0                           │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv.nn.1                           │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv.nn.2                           │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv.get_centroids                  │ … │  │
+│ … │ net.backbone.11.0.graph_conv.gconv.get_centroids.centers_proposal │ … │  │
+│ … │ net.backbone.11.0.graph_conv.dilated_knn_graph                    │ … │  │
+│ … │ net.backbone.11.0.graph_conv.dilated_knn_graph._dilated           │ … │  │
+│ … │ net.backbone.11.0.fc2                                             │ … │  │
+│ … │ net.backbone.11.0.fc2.0                                           │ … │  │
+│ … │ net.backbone.11.0.fc2.1                                           │ … │  │
+│ … │ net.backbone.11.0.drop_path                                       │ … │  │
+│ … │ net.backbone.11.1                                                 │ … │  │
+│ … │ net.backbone.11.1.fc1                                             │ … │  │
+│ … │ net.backbone.11.1.fc1.0                                           │ … │  │
+│ … │ net.backbone.11.1.fc1.1                                           │ … │  │
+│ … │ net.backbone.11.1.act                                             │ … │  │
+│ … │ net.backbone.11.1.fc2                                             │ … │  │
+│ … │ net.backbone.11.1.fc2.0                                           │ … │  │
+│ … │ net.backbone.11.1.fc2.1                                           │ … │  │
+│ … │ net.backbone.11.1.conv                                            │ … │  │
+│ … │ net.backbone.11.1.conv.conv                                       │ … │  │
+│ … │ net.backbone.11.1.drop_path                                       │ … │  │
+│ … │ net.backbone.12                                                   │ … │  │
+│ … │ net.backbone.12.conv                                              │ … │  │
+│ … │ net.backbone.12.conv.0                                            │ … │  │
+│ … │ net.backbone.12.conv.1                                            │ … │  │
+│ … │ net.backbone.13                                                   │ … │  │
+│ … │ net.backbone.13.0                                                 │ … │  │
+│ … │ net.backbone.13.0.fc1                                             │ … │  │
+│ … │ net.backbone.13.0.fc1.0                                           │ … │  │
+│ … │ net.backbone.13.0.fc1.1                                           │ … │  │
+│ … │ net.backbone.13.0.graph_conv                                      │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv                                │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv.nn                             │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv.nn.0                           │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv.nn.1                           │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv.nn.2                           │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv.get_centroids                  │ … │  │
+│ … │ net.backbone.13.0.graph_conv.gconv.get_centroids.centers_proposal │ … │  │
+│ … │ net.backbone.13.0.graph_conv.dilated_knn_graph                    │ … │  │
+│ … │ net.backbone.13.0.graph_conv.dilated_knn_graph._dilated           │ … │  │
+│ … │ net.backbone.13.0.fc2                                             │ … │  │
+│ … │ net.backbone.13.0.fc2.0                                           │ … │  │
+│ … │ net.backbone.13.0.fc2.1                                           │ … │  │
+│ … │ net.backbone.13.0.drop_path                                       │ … │  │
+│ … │ net.backbone.13.1                                                 │ … │  │
+│ … │ net.backbone.13.1.fc1                                             │ … │  │
+│ … │ net.backbone.13.1.fc1.0                                           │ … │  │
+│ … │ net.backbone.13.1.fc1.1                                           │ … │  │
+│ … │ net.backbone.13.1.act                                             │ … │  │
+│ … │ net.backbone.13.1.fc2                                             │ … │  │
+│ … │ net.backbone.13.1.fc2.0                                           │ … │  │
+│ … │ net.backbone.13.1.fc2.1                                           │ … │  │
+│ … │ net.backbone.13.1.conv                                            │ … │  │
+│ … │ net.backbone.13.1.conv.conv                                       │ … │  │
+│ … │ net.backbone.13.1.drop_path                                       │ … │  │
+│ … │ net.backbone.14                                                   │ … │  │
+│ … │ net.backbone.14.0                                                 │ … │  │
+│ … │ net.backbone.14.0.fc1                                             │ … │  │
+│ … │ net.backbone.14.0.fc1.0                                           │ … │  │
+│ … │ net.backbone.14.0.fc1.1                                           │ … │  │
+│ … │ net.backbone.14.0.graph_conv                                      │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv                                │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv.nn                             │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv.nn.0                           │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv.nn.1                           │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv.nn.2                           │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv.get_centroids                  │ … │  │
+│ … │ net.backbone.14.0.graph_conv.gconv.get_centroids.centers_proposal │ … │  │
+│ … │ net.backbone.14.0.graph_conv.dilated_knn_graph                    │ … │  │
+│ … │ net.backbone.14.0.graph_conv.dilated_knn_graph._dilated           │ … │  │
+│ … │ net.backbone.14.0.fc2                                             │ … │  │
+│ … │ net.backbone.14.0.fc2.0                                           │ … │  │
+│ … │ net.backbone.14.0.fc2.1                                           │ … │  │
+│ … │ net.backbone.14.0.drop_path                                       │ … │  │
+│ … │ net.backbone.14.1                                                 │ … │  │
+│ … │ net.backbone.14.1.fc1                                             │ … │  │
+│ … │ net.backbone.14.1.fc1.0                                           │ … │  │
+│ … │ net.backbone.14.1.fc1.1                                           │ … │  │
+│ … │ net.backbone.14.1.act                                             │ … │  │
+│ … │ net.backbone.14.1.fc2                                             │ … │  │
+│ … │ net.backbone.14.1.fc2.0                                           │ … │  │
+│ … │ net.backbone.14.1.fc2.1                                           │ … │  │
+│ … │ net.backbone.14.1.conv                                            │ … │  │
+│ … │ net.backbone.14.1.conv.conv                                       │ … │  │
+│ … │ net.backbone.14.1.drop_path                                       │ … │  │
+│ … │ net.prediction                                                    │ … │  │
+│ … │ net.prediction.0                                                  │ … │  │
+│ … │ net.prediction.1                                                  │ … │  │
+│ … │ net.prediction.2                                                  │ … │  │
+│ … │ net.prediction.3                                                  │ … │  │
+│ … │ net.prediction.4                                                  │ … │  │
+│ … │ criterion                                                         │ … │  │
+│ … │ train_loss                                                        │ … │  │
+│ … │ val_loss                                                          │ … │  │
+│ … │ test_loss                                                         │ … │  │
+│ … │ val_mAP                                                           │ … │  │
+│ … │ test_mAP                                                          │ … │  │
+│ … │ val_mAP_best                                                      │ … │  │
+└───┴───────────────────────────────────────────────────────────────────┴───┴──┘
+Trainable params: 32.0 M                                                        
+Non-trainable params: 12.1 M                                                    
+Total params: 44.1 M                                                            
+Total estimated model params size (MB): 176                                     

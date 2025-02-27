@@ -2,14 +2,14 @@
 _target_: pytorch_lightning.trainer.Trainer
 default_root_dir: ${paths.output_dir}
 num_sanity_val_steps: 0
-min_epochs: 30 # prevents early stopping
+min_epochs: 50 # prevents early stopping
 max_epochs: 50 
 
 accelerator: gpu
 devices: 1
 gradient_clip_val: 0.5
 # mixed precision for extra speed-up
-precision: 32
+precision: 16
 detect_anomaly: false
 # perform a validation loop every N training epochs
 check_val_every_n_epoch: 1
@@ -21,4 +21,5 @@ strategy:  ddp #auto
 num_nodes: 1
 sync_batchnorm: True
 use_distributed_sampler: True
+
 

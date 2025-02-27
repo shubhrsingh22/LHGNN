@@ -3,7 +3,7 @@ _target_: src.models.tagging_module.TaggingModule
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 5e-4
+  lr: 1e-3
   weight_decay: 5e-7
   eps: 1e-8
   betas: [0.95, 0.999]
@@ -28,12 +28,12 @@ net:
   epsilon: 0.2
   drop_path: 0.1
   size: 's'
-  num_class: 200
+  num_class: 527
   emb_dims: 1024
   freq_num: 128
   time_num: 1024
   clusters: 50
-  cluster_ratio: 0.5
+  cluster_ratio: 0.4
   conv: 'lhg'
   #k_dpc: 9
   #cluster_method: 'soft-kmeans'
@@ -52,9 +52,9 @@ net:
 
 # compile model for faster training with pytorch 2.0
 compile: false
-loss: 'bce'
+loss: 'bcelogit'
 opt_warmup: True 
-learning_rate: 5e-4
+learning_rate: 1e-3
 lr_rate:  [0.05, 0.02, 0.01,0.005,0.002,0.001,0.0005,0.0002]
 lr_scheduler_epoch: [10,15,20,25,30,35,50,45]
 

@@ -62,7 +62,8 @@ class TaggingModule(LightningModule):
         self.test_predictions = []
         self.test_targets = []
         self.milestones = [10,15,20,25,30,35,40]
-    
+        self.ap = AveragePrecision(task="multilabel", num_labels=527, average=None)
+        self.ap_test = AveragePrecision(task="multilabel", num_labels=527, average=None)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
@@ -103,6 +104,17 @@ class TaggingModule(LightningModule):
         
         return loss, preds, y
     
+    def on_train_batch_start(self, batch, batch_idx):
+        global_step = self.trainer.global_step
+        optimizer = self.optimizers()
+        if global_step <= 1000 and global_step % 50 == 0:
+            warm_lr = (global_step / 1000) * self.hparams.optimizer.keywords['lr']  # Assuming initial_lr is defined in hparams
+            
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = warm_lr
+            self.log('lr', warm_lr, on_step=True, on_epoch=False, logger=True)
+        current_lr = next(iter(optimizer.param_groups))['lr']
+        self.log('cur-lr', current_lr, on_step=False, on_epoch=True, logger=True)
     
         
 
@@ -142,7 +154,7 @@ class TaggingModule(LightningModule):
 
         self.val_predictions.append(preds_cpu)
         self.val_targets.append(target_cpu)
-
+        self.ap.update(preds_cpu, target_cpu.long())
         # update and log metrics
         self.val_loss(loss)
         #self.val_mAP(stats['AP'])
@@ -154,42 +166,21 @@ class TaggingModule(LightningModule):
        
         val_preds = torch.cat(self.val_predictions, dim=0)
         val_targets = torch.cat(self.val_targets, dim=0)
-        metric_dict = {'mAP': 0.0, 'acc': 0.0}
-        if torch.cuda.device_count() > 1:
-            gather_pred = [torch.zeros_like(val_preds) for _ in range(dist.get_world_size())]
-            gather_target = [torch.zeros_like(val_targets) for _ in range(dist.get_world_size())]
-            dist.barrier()
         
-        if torch.cuda.device_count() > 1:
-            dist.all_gather(gather_pred, val_preds)
-            dist.all_gather(gather_target, val_targets)
-
-            if dist.get_rank() == 0:
-                gather_pred = torch.cat(gather_pred, dim=0).cpu().detach().numpy()
-                gather_target = torch.cat(gather_target, dim=0).cpu().detach().numpy()
-                stats = calculate_stats(gather_pred, gather_target)
-                mAP = np.mean([stat['AP'] for stat in stats])
-                metric_dict['mAP'] = mAP
-                #self.val_mAP_best(mAP)
-            dist.barrier()
-
-            #self.log("val/mAP", mAP , on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
-            self.val_mAP_best(metric_dict['mAP'])
-            self.log("val/mAP", metric_dict['mAP'], on_step=False, on_epoch=True, prog_bar=True,sync_dist=False)
-                #logging.info(f'Validation done for epoch {self.current_epoch}')
-            self.log("val/mAP_best", self.val_mAP_best.compute(), on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
-            
+        #stats = calculate_stats(val_preds.cpu().detach().numpy(), val_targets.cpu().detach().numpy())
+        #mAP = np.mean([stat['AP'] for stat in stats])
+        #acc = stats[0]['acc']
+        #self.val_mAP_best(mAP)
         
-        else:
-            stats = calculate_stats(val_preds.cpu().detach().numpy(), val_targets.cpu().detach().numpy())
-            mAP = np.mean([stat['AP'] for stat in stats])
-            acc = stats[0]['acc']
-            self.val_mAP_best(mAP)
-            self.log("val/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
-            self.log("val/mAP_best", self.val_mAP_best.compute(), on_step=False, on_epoch=True, prog_bar=True)
-        
+        #avg_pres = self.ap.compute()
+        #print(avg_pres.shape)
+        #self.log("val/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
+        self.log("val/mAP",self.ap.compute().mean(),on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
         self.val_predictions.clear()
         self.val_targets.clear()
+        self.ap.reset()
+        
+        
         
 
         
@@ -234,7 +225,7 @@ class TaggingModule(LightningModule):
             acc = stats[0]['acc']
             self.log("test/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True,sync_dist=True)
         
-        return {'test_mAP': mAP}
+        #return {'test_mAP': mAP}
       
         
     def setup(self, stage:str) -> None:
@@ -249,15 +240,15 @@ class TaggingModule(LightningModule):
         if self.hparams.compile and stage == "fit":
             self.net = torch.compile(self.net)
     
-    def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure):
-    # manually warm up lr without a scheduler
-        if self.trainer.global_step < 1000:
-            lr_scale = min(1.0, float(self.trainer.global_step + 1) / 1000.0)
-            for pg in optimizer.param_groups:
-                pg["lr"] = lr_scale * self.hparams.optimizer.keywords['lr']
+    # def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure):
+    # # manually warm up lr without a scheduler
+    #     if self.trainer.global_step < 1000:
+    #         lr_scale = min(1.0, float(self.trainer.global_step + 1) / 1000.0)
+    #         for pg in optimizer.param_groups:
+    #             pg["lr"] = lr_scale * self.hparams.optimizer.keywords['lr']
 
-    # update params
-        optimizer.step(closure=optimizer_closure)
+    # # update params
+    #     optimizer.step(closure=optimizer_closure)
         
     def configure_optimizers(self) -> Dict[str, Any]:
     #     """Choose what optimizers and learning-rate schedulers to use in your optimization.

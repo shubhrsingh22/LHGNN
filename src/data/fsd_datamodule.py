@@ -174,16 +174,7 @@ class FSDDataModule(LightningDataModule):
 
     def train_dataloader(self)-> DataLoader[Any]:
 
-        if self.balance_samplr == True:
-            
-            samples_weight = np.loadtxt(self.sampler_csv_pth,delimiter=',',dtype=np.float32)
-            self.sampler = torch.utils.data.WeightedRandomSampler(samples_weight, len(self.train_dataset))
-            #self.sampler = torch.utils.subset_random_sampler.SubsetRandomSampler(indices)
-            shuffle_tr = False
         
-        else:
-            self.sampler = None
-            shuffle_tr = True
         #self.sampler = DistributedSampler(self.train_dataset,shuffle=False) if self.num_devices > 1 else None
         #self.sampler = None
         return DataLoader(dataset=self.train_dataset,
@@ -194,13 +185,14 @@ class FSDDataModule(LightningDataModule):
     
     def val_dataloader(self)-> DataLoader[Any]:
 
-        self.sampler = DistributedSampler(self.val_dataset,shuffle=False) if self.num_devices > 1 else None
+        #self.sampler = DistributedSampler(self.val_dataset,shuffle=False) if self.num_devices > 1 else None
 
         return DataLoader(dataset=self.val_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
             shuffle=False,
+            sampler=None,
             persistent_workers=self.persistent_workers,drop_last=True     
         )
     

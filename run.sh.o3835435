@@ -1,0 +1,251 @@
+Variable OMP_NUM_THREADS has been set to 24
+--------------------
+Hostname: sbg14
+Sun Sep  8 10:02:16 BST 2024
+Free GPU: 0 of 3
+--------------------
+GPU0: [92mNot in use.[39m
+GPU1: [92mNot in use.[39m
+GPU2: [92mNot in use.[39m
+
+User: [91macw572[39m JobID: [91m3835435[39m GPU Allocation: [91m2[39m Queue: [91mall.q[39m
+User: [91meey042[39m JobID: [91m3832623[39m GPU Allocation: [91m1[39m Queue: [91mall.q[39m
+[91mWarning! GPUs requested but not used![39m
+In main
+[[36m2024-09-08 10:02:26,623[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>[0m
+[[36m2024-09-08 10:02:26,627[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>[0m
+CONFIG
+├── data
+│   └── _target_: src.data.audioset_datamodule.AudioSetModule                   
+│       json_path: /data/scratch/acw572/AudioSet/datafiles/                     
+│       data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet              
+│       meta_path: /data/EECS-MachineListeningLab/datasets/AudioSet/ground_truth
+│       label_csv_pth: /data/scratch/acw572/AudioSet/datafiles/class_labels_indi
+│       samplr_csv_pth: null                                                    
+│       balance_samplr: false                                                   
+│       batch_size: 32                                                          
+│       num_workers: 4                                                          
+│       pin_memory: true                                                        
+│       persistent_workers: true                                                
+│       sr: 16000                                                               
+│       fmin: 20                                                                
+│       fmax: 8000                                                              
+│       num_mels: 128                                                           
+│       window_type: hanning                                                    
+│       target_len: 1024                                                        
+│       freqm: 48                                                               
+│       timem: 192                                                              
+│       mixup: 0.5                                                              
+│       norm_mean: -4.6476                                                      
+│       norm_std: 4.5699                                                        
+│       subset: full                                                            
+│       num_devices: 3                                                          
+│                                                                               
+├── model
+│   └── _target_: src.models.tagging_module.TaggingModule                       
+│       optimizer:                                                              
+│         _target_: torch.optim.Adam                                            
+│         _partial_: true                                                       
+│         lr: 0.001                                                             
+│         weight_decay: 5.0e-07                                                 
+│         eps: 1.0e-08                                                          
+│         betas:                                                                
+│         - 0.95                                                                
+│         - 0.999                                                               
+│       scheduler:                                                              
+│         _target_: torch.optim.lr_scheduler.MultiStepLR                        
+│         _partial_: true                                                       
+│         milestones:                                                           
+│         - 10                                                                  
+│         - 15                                                                  
+│         - 20                                                                  
+│         - 25                                                                  
+│         - 30                                                                  
+│         - 35                                                                  
+│         - 40                                                                  
+│         gamma: 0.5                                                            
+│       net:                                                                    
+│         _target_: src.models.components.LHGNN.LHGNN                           
+│         k: 25                                                                 
+│         act: gelu                                                             
+│         norm: batch                                                           
+│         bias: true                                                            
+│         dropout: 0.0                                                          
+│         dilation: true                                                        
+│         epsilon: 0.2                                                          
+│         drop_path: 0.1                                                        
+│         size: s                                                               
+│         num_class: 200                                                        
+│         emb_dims: 1024                                                        
+│         freq_num: 128                                                         
+│         time_num: 1024                                                        
+│         clusters: 50                                                          
+│         cluster_ratio: 0.4                                                    
+│         conv: lhg                                                             
+│       compile: false                                                          
+│       loss: bcelogit                                                          
+│       opt_warmup: true                                                        
+│       learning_rate: 0.001                                                    
+│       lr_rate:                                                                
+│       - 0.05                                                                  
+│       - 0.02                                                                  
+│       - 0.01                                                                  
+│       - 0.005                                                                 
+│       - 0.002                                                                 
+│       - 0.001                                                                 
+│       - 0.0005                                                                
+│       - 0.0002                                                                
+│       lr_scheduler_epoch:                                                     
+│       - 10                                                                    
+│       - 15                                                                    
+│       - 20                                                                    
+│       - 25                                                                    
+│       - 30                                                                    
+│       - 35                                                                    
+│       - 50                                                                    
+│       - 45                                                                    
+│                                                                               
+├── callbacks
+│   └── model_checkpoint:                                                       
+│         _target_: pytorch_lightning.callbacks.ModelCheckpoint                 
+│         dirpath: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024-
+│         filename: epoch_{epoch:03d}                                           
+│         monitor: val/mAP                                                      
+│         verbose: false                                                        
+│         save_last: true                                                       
+│         save_top_k: 20                                                        
+│         mode: max                                                             
+│         auto_insert_metric_name: false                                        
+│         save_weights_only: false                                              
+│         every_n_train_steps: null                                             
+│         train_time_interval: null                                             
+│         every_n_epochs: null                                                  
+│         save_on_train_epoch_end: null                                         
+│       early_stopping:                                                         
+│         _target_: pytorch_lightning.callbacks.EarlyStopping                   
+│         monitor: val/loss                                                     
+│         min_delta: 0.0                                                        
+│         patience: 5                                                           
+│         verbose: false                                                        
+│         mode: min                                                             
+│         strict: true                                                          
+│         check_finite: true                                                    
+│         stopping_threshold: null                                              
+│         divergence_threshold: null                                            
+│         check_on_train_epoch_end: null                                        
+│       model_summary:                                                          
+│         _target_: pytorch_lightning.callbacks.RichModelSummary                
+│         max_depth: -1                                                         
+│       tqdm_progress_bar:                                                      
+│         _target_: pytorch_lightning.callbacks.TQDMProgressBar                 
+│                                                                               
+├── logger
+│   └── wandb:                                                                  
+│         _target_: pytorch_lightning.loggers.WandbLogger                       
+│         save_dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024
+│         offline: false                                                        
+│         id: null                                                              
+│         anonymous: null                                                       
+│         project: audioset-bal                                                 
+│         log_model: false                                                      
+│         prefix: ''                                                            
+│         group: Tagging                                                        
+│         tags:                                                                 
+│         - fsd                                                                 
+│         - hgcn                                                                
+│         job_type: ''                                                          
+│                                                                               
+├── trainer
+│   └── _target_: pytorch_lightning.trainer.Trainer                             
+│       default_root_dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/run
+│       num_sanity_val_steps: 0                                                 
+│       min_epochs: 50                                                          
+│       max_epochs: 50                                                          
+│       accelerator: gpu                                                        
+│       devices: 3                                                              
+│       gradient_clip_val: 0.5                                                  
+│       precision: 16                                                           
+│       detect_anomaly: false                                                   
+│       check_val_every_n_epoch: 1                                              
+│       deterministic: false                                                    
+│       strategy: ddp                                                           
+│       num_nodes: 1                                                            
+│       sync_batchnorm: true                                                    
+│       use_distributed_sampler: true                                           
+│                                                                               
+├── paths
+│   └── root_dir: /data/home/acw572/hgann/HGANN                                 
+│       exp_dir: /data/scratch/acw572                                           
+│       data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet              
+│       meta_dir: /data/EECS-MachineListeningLab/shubhr/hgann                   
+│       log_dir: /data/scratch/acw572/LHGNN/logs/                               
+│       output_dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024
+│       work_dir: /data/home/acw572/hgann/HGANN                                 
+│                                                                               
+├── extras
+│   └── ignore_warnings: false                                                  
+│       enforce_tags: true                                                      
+│       print_config: true                                                      
+│                                                                               
+├── task_name
+│   └── train-audioset-new                                                      
+├── pretrained
+│   └── None                                                                    
+├── tags
+│   └── ['dev']                                                                 
+├── train
+│   └── True                                                                    
+├── eval
+│   └── False                                                                   
+├── wa
+│   └── False                                                                   
+├── pretrain_path
+│   └── /data/scratch/acw572/model_out/train/20240424-063514-pvig_s_224_gelu-224
+├── ckpt_path
+│   └── /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-22_21-04-17/checkpoin
+└── seed
+    └── None                                                                    
+[[36m2024-09-08 10:02:26,685[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] In train[0m
+[[36m2024-09-08 10:02:26,685[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating datamodule <src.data.audioset_datamodule.AudioSetModule>[0m
+[[36m2024-09-08 10:02:26,889[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating model <src.models.tagging_module.TaggingModule>[0m
+/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/pytorch_lightning/utilities/parsing.py:198: Attribute 'net' is an instance of `nn.Module` and is already saved during checkpointing. It is recommended to ignore them using `self.save_hyperparameters(ignore=['net'])`.
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+using relative_pos
+[[36m2024-09-08 10:02:33,790[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Training from scratch[0m
+[[36m2024-09-08 10:02:33,790[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating callbacks...[0m
+[[36m2024-09-08 10:02:33,790[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.ModelCheckpoint>[0m
+[[36m2024-09-08 10:02:33,796[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.EarlyStopping>[0m
+[[36m2024-09-08 10:02:33,797[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.RichModelSummary>[0m
+[[36m2024-09-08 10:02:33,797[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating callback <pytorch_lightning.callbacks.TQDMProgressBar>[0m
+[[36m2024-09-08 10:02:33,798[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating loggers...[0m
+[[36m2024-09-08 10:02:33,798[0m][[34mutils.instantiators[0m][[32mINFO[0m] - [rank: 0] Instantiating logger <pytorch_lightning.loggers.WandbLogger>[0m
+[[36m2024-09-08 10:02:33,889[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating trainer <pytorch_lightning.trainer.Trainer>[0m
+/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/lightning_fabric/connector.py:558: `precision=16` is supported for historical reasons but its usage is discouraged. Please set your precision to 16-mixed instead!
+Using 16bit Automatic Mixed Precision (AMP)
+Trainer already configured with model summary callbacks: [<class 'pytorch_lightning.callbacks.rich_model_summary.RichModelSummary'>]. Skipping setting a default `ModelSummary` callback.
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+IPU available: False, using: 0 IPUs
+HPU available: False, using: 0 HPUs
+[[36m2024-09-08 10:02:34,054[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Logging hyperparameters![0m
+wandb: Currently logged in as: shubhr. Use `wandb login --relogin` to force relogin
+wandb: wandb version 0.17.9 is available!  To upgrade, please run:
+wandb:  $ pip install wandb --upgrade
+wandb: Tracking run with wandb version 0.16.1
+wandb: Run data is saved locally in /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024-09-08_10-02-26/wandb/run-20240908_100235-8z3rti9b
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run giddy-cosmos-110
+wandb: ⭐️ View project at https://wandb.ai/shubhr/audioset-bal
+wandb: 🚀 View run at https://wandb.ai/shubhr/audioset-bal/runs/8z3rti9b
+[[36m2024-09-08 10:02:43,809[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Starting training![0m
+Initializing distributed: GLOBAL_RANK: 0, MEMBER: 1/3

@@ -7,7 +7,7 @@ import torchaudio
 import unittest
 import json 
 import csv
-
+import h5py 
 
 def label_to_index(label_csv):
     index_dict = {}
@@ -47,23 +47,33 @@ class FSDDataset(Dataset):
         return len(self.data)
     
     def wav_2_fbank(self,filename,filename2=None):
-
-        if filename2 == None:
+        sr = 16000
+        if filename2 is  None:
             
-            waveform,sr = torchaudio.load(filename)
-            
-            transform = torchaudio.transforms.Resample(sr,self.sr)
-            waveform = transform(waveform)
+            #waveform,sr = torchaudio.load(filename)
+            waveform = filename
+            if waveform.dim() == 1:
+             # If the waveform is 1D, add an extra dimension to make it 2D
+                waveform = waveform.unsqueeze(0)
+            #transform = torchaudio.transforms.Resample(sr,self.sr)
+            #waveform = transform(waveform)
             waveform = waveform - waveform.mean()
             
         else:
             
-            waveform1,sr = torchaudio.load(filename)
-            
-            waveform2,sr = torchaudio.load(filename2)
-            transform = torchaudio.transforms.Resample(sr,self.sr)
-            waveform1 = transform(waveform1)
-            waveform2 = transform(waveform2)
+            #waveform1,sr = torchaudio.load(filename)
+            waveform1 = filename
+            if waveform1.dim() == 1:
+             # If the waveform is 1D, add an extra dimension to make it 2D
+                waveform1 = waveform1.unsqueeze(0)
+            #waveform2,sr = torchaudio.load(filename2)
+            waveform2 = filename2
+            if waveform2.dim() == 1:
+             # If the waveform is 1D, add an extra dimension to make it 2D
+                waveform2 = waveform2.unsqueeze(0)
+            #transform = torchaudio.transforms.Resample(sr,self.sr)
+            #waveform1 = transform(waveform1)
+            #waveform2 = transform(waveform2)
 
             waveform1 = waveform1 - waveform1.mean()
             waveform2 = waveform2 - waveform2.mean()
@@ -107,8 +117,12 @@ class FSDDataset(Dataset):
                 # do mixup
                 
                 mixup_idx = random.randint(0,len(self.data)-1)
-                wav_file1 = self.data[idx]['wav']
-                wav_file2 = self.data[mixup_idx]['wav']
+                with h5py.File(self.data[idx]['wav'], 'r') as f1, h5py.File(self.data[mixup_idx]['wav'], 'r') as f2:
+                    wav_file1 = torch.from_numpy(f1['audio'][:])
+                    wav_file2 = torch.from_numpy(f2['audio'][:])
+                     
+                #wav_file1 = self.data[idx]['wav']
+                #wav_file2 = self.data[mixup_idx]['wav']
                 fbank,mix_lambda = self.wav_2_fbank(wav_file1,wav_file2)
                 label = self.data[idx]['labels']
                 label2 = self.data[mixup_idx]['labels']
@@ -121,8 +135,11 @@ class FSDDataset(Dataset):
             
             else:
                 # no mixup
+                with h5py.File(self.data[idx]['wav'], 'r') as f1:
+                    wav_file = torch.from_numpy(f1['audio'][:])
+                #wav_file = self.data[idx]['wav']
                 
-                wav_file = self.data[idx]['wav']
+                #wav_file = self.data[idx]['wav']
                 fbank,_ = self.wav_2_fbank(wav_file)
                 label = self.data[idx]['labels']
                 label_list = np.zeros(self.num_labels)
@@ -141,7 +158,9 @@ class FSDDataset(Dataset):
             fbank = (fbank - self.norm_mean)/self.norm_std
             return fbank,label_list
         else:
-            wav_file = self.data[idx]['wav']
+            with h5py.File(self.data[idx]['wav'], 'r') as f1:
+                    wav_file = torch.from_numpy(f1['audio'][:])
+            #wav_file = self.data[idx]['wav']
             fbank,_ = self.wav_2_fbank(wav_file)
             label = self.data[idx]['labels']
             label_list = np.zeros(self.num_labels)

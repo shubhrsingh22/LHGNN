@@ -1,0 +1,356 @@
+Variable OMP_NUM_THREADS has been set to 16
+--------------------
+Hostname: sbg9
+Sun Sep  8 09:18:07 BST 2024
+Free GPU: 0 of 2
+--------------------
+GPU0: [92mNot in use.[39m
+GPU1: [92mNot in use.[39m
+
+User: [91macw572[39m JobID: [91m3835423[39m GPU Allocation: [91m1[39m Queue: [91mall.q[39m
+User: [91macw778[39m JobID: [91m3833142[39m GPU Allocation: [91m1[39m Queue: [91mall.q[39m
+User: [91macw779[39m JobID: [91m3831703[39m GPU Allocation: [91m1[39m Queue: [91mall.q[39m
+[91mWarning! GPUs requested but not used![39m
+In main
+[[36m2024-09-08 09:20:23,246[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Enforcing tags! <cfg.extras.enforce_tags=True>[0m
+[[36m2024-09-08 09:20:23,253[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Printing config tree with Rich! <cfg.extras.print_config=True>[0m
+CONFIG
+├── data
+│   └── _target_: src.data.fsd_datamodule.FSDDataModule                         
+│       json_path: /data/scratch/acw572/hdf_fsd50k/datafiles/                   
+│       data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet              
+│       meta_path: /data/EECS-MachineListeningLab/datasets/AudioSet/ground_truth
+│       label_csv_pth: /data/scratch/acw572/LHGNN/datafiles/class_labels_indices
+│       samplr_csv_pth: /data/scratch/acw572/LHGNN/datafiles/fsd50k_tr_full_weig
+│       balance_samplr: true                                                    
+│       batch_size: 32                                                          
+│       num_workers: 16                                                         
+│       pin_memory: true                                                        
+│       persistent_workers: true                                                
+│       sr: 16000                                                               
+│       fmin: 20                                                                
+│       fmax: 8000                                                              
+│       num_mels: 128                                                           
+│       window_type: hanning                                                    
+│       target_len: 1024                                                        
+│       freqm: 48                                                               
+│       timem: 192                                                              
+│       mixup: 0.5                                                              
+│       norm_mean: -4.6476                                                      
+│       norm_std: 4.5699                                                        
+│       num_devices: 1                                                          
+│                                                                               
+├── model
+│   └── _target_: src.models.tagging_module.TaggingModule                       
+│       optimizer:                                                              
+│         _target_: torch.optim.Adam                                            
+│         _partial_: true                                                       
+│         lr: 0.001                                                             
+│         weight_decay: 5.0e-07                                                 
+│         eps: 1.0e-08                                                          
+│         betas:                                                                
+│         - 0.95                                                                
+│         - 0.999                                                               
+│       scheduler:                                                              
+│         _target_: torch.optim.lr_scheduler.MultiStepLR                        
+│         _partial_: true                                                       
+│         milestones:                                                           
+│         - 10                                                                  
+│         - 15                                                                  
+│         - 20                                                                  
+│         - 25                                                                  
+│         - 30                                                                  
+│         - 35                                                                  
+│         - 40                                                                  
+│         gamma: 0.5                                                            
+│       net:                                                                    
+│         _target_: src.models.components.LHGNN.LHGNN                           
+│         k: 25                                                                 
+│         act: gelu                                                             
+│         norm: batch                                                           
+│         bias: true                                                            
+│         dropout: 0.0                                                          
+│         dilation: true                                                        
+│         epsilon: 0.2                                                          
+│         drop_path: 0.1                                                        
+│         size: s                                                               
+│         num_class: 200                                                        
+│         emb_dims: 1024                                                        
+│         freq_num: 128                                                         
+│         time_num: 1024                                                        
+│         clusters: 50                                                          
+│         cluster_ratio: 0.4                                                    
+│         conv: lhg                                                             
+│       compile: false                                                          
+│       loss: bcelogit                                                          
+│       opt_warmup: true                                                        
+│       learning_rate: 0.001                                                    
+│       lr_rate:                                                                
+│       - 0.05                                                                  
+│       - 0.02                                                                  
+│       - 0.01                                                                  
+│       - 0.005                                                                 
+│       - 0.002                                                                 
+│       - 0.001                                                                 
+│       - 0.0005                                                                
+│       - 0.0002                                                                
+│       lr_scheduler_epoch:                                                     
+│       - 10                                                                    
+│       - 15                                                                    
+│       - 20                                                                    
+│       - 25                                                                    
+│       - 30                                                                    
+│       - 35                                                                    
+│       - 50                                                                    
+│       - 45                                                                    
+│                                                                               
+├── callbacks
+│   └── model_checkpoint:                                                       
+│         _target_: pytorch_lightning.callbacks.ModelCheckpoint                 
+│         dirpath: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024-
+│         filename: epoch_{epoch:03d}                                           
+│         monitor: val/mAP                                                      
+│         verbose: false                                                        
+│         save_last: true                                                       
+│         save_top_k: 20                                                        
+│         mode: max                                                             
+│         auto_insert_metric_name: false                                        
+│         save_weights_only: false                                              
+│         every_n_train_steps: null                                             
+│         train_time_interval: null                                             
+│         every_n_epochs: null                                                  
+│         save_on_train_epoch_end: null                                         
+│       early_stopping:                                                         
+│         _target_: pytorch_lightning.callbacks.EarlyStopping                   
+│         monitor: val/loss                                                     
+│         min_delta: 0.0                                                        
+│         patience: 5                                                           
+│         verbose: false                                                        
+│         mode: min                                                             
+│         strict: true                                                          
+│         check_finite: true                                                    
+│         stopping_threshold: null                                              
+│         divergence_threshold: null                                            
+│         check_on_train_epoch_end: null                                        
+│       model_summary:                                                          
+│         _target_: pytorch_lightning.callbacks.RichModelSummary                
+│         max_depth: -1                                                         
+│       tqdm_progress_bar:                                                      
+│         _target_: pytorch_lightning.callbacks.TQDMProgressBar                 
+│                                                                               
+├── logger
+│   └── wandb:                                                                  
+│         _target_: pytorch_lightning.loggers.WandbLogger                       
+│         save_dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024
+│         offline: false                                                        
+│         id: null                                                              
+│         anonymous: null                                                       
+│         project: audioset-bal                                                 
+│         log_model: false                                                      
+│         prefix: ''                                                            
+│         group: Tagging                                                        
+│         tags:                                                                 
+│         - fsd                                                                 
+│         - hgcn                                                                
+│         job_type: ''                                                          
+│                                                                               
+├── trainer
+│   └── _target_: pytorch_lightning.trainer.Trainer                             
+│       default_root_dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/run
+│       num_sanity_val_steps: 0                                                 
+│       min_epochs: 50                                                          
+│       max_epochs: 50                                                          
+│       accelerator: gpu                                                        
+│       devices: 1                                                              
+│       gradient_clip_val: 0.5                                                  
+│       precision: 16                                                           
+│       detect_anomaly: false                                                   
+│       check_val_every_n_epoch: 1                                              
+│       deterministic: false                                                    
+│       strategy: ddp                                                           
+│       num_nodes: 1                                                            
+│       sync_batchnorm: true                                                    
+│       use_distributed_sampler: true                                           
+│                                                                               
+├── paths
+│   └── root_dir: /data/home/acw572/hgann/HGANN                                 
+│       exp_dir: /data/scratch/acw572                                           
+│       data_dir: /data/EECS-MachineListeningLab/datasets/AudioSet              
+│       meta_dir: /data/EECS-MachineListeningLab/shubhr/hgann                   
+│       log_dir: /data/scratch/acw572/LHGNN/logs/                               
+│       output_dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024
+│       work_dir: /data/home/acw572/hgann/HGANN                                 
+│                                                                               
+├── extras
+│   └── ignore_warnings: false                                                  
+│       enforce_tags: true                                                      
+│       print_config: true                                                      
+│                                                                               
+├── task_name
+│   └── train-audioset-new                                                      
+├── pretrained
+│   └── None                                                                    
+├── tags
+│   └── ['dev']                                                                 
+├── train
+│   └── True                                                                    
+├── eval
+│   └── False                                                                   
+├── wa
+│   └── False                                                                   
+├── pretrain_path
+│   └── /data/scratch/acw572/model_out/train/20240424-063514-pvig_s_224_gelu-224
+├── ckpt_path
+│   └── /data/scratch/acw572/LHGNN/logs/train/runs/2024-08-22_21-04-17/checkpoin
+└── seed
+    └── None                                                                    
+[[36m2024-09-08 09:20:23,353[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] In train[0m
+[[36m2024-09-08 09:20:23,353[0m][[34m__main__[0m][[32mINFO[0m] - [rank: 0] Instantiating datamodule <src.data.fsd_datamodule.FSDDataModule>[0m
+[[36m2024-09-08 09:20:23,426[0m][[34mutils.utils[0m][[31mERROR[0m] - [rank: 0] [0m
+Traceback (most recent call last):
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 644, in _locate
+    obj = getattr(obj, part)
+          ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'src.data' has no attribute 'fsd_datamodule'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 650, in _locate
+    obj = import_module(mod)
+          ^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1129, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1059, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/data/home/acw572/hgann/HGANN/src/data/fsd_datamodule.py", line 195
+    sampler=None
+            ^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 134, in _resolve_target
+    target = _locate(target)
+             ^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 658, in _locate
+    raise ImportError(
+ImportError: Error loading 'src.data.fsd_datamodule.FSDDataModule':
+SyntaxError('invalid syntax. Perhaps you forgot a comma?', ('/data/home/acw572/hgann/HGANN/src/data/fsd_datamodule.py', 195, 21, '            sampler=None\n', 196, 26))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/data/home/acw572/hgann/HGANN/src/utils/utils.py", line 101, in wrap
+    metric_dict, object_dict = task_func(cfg=cfg)
+                               ^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/hgann/HGANN/src/train.py", line 75, in train
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 226, in instantiate
+    return instantiate_node(
+           ^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 333, in instantiate_node
+    _target_ = _resolve_target(node.get(_Keys.TARGET), full_key)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 139, in _resolve_target
+    raise InstantiationException(msg) from e
+hydra.errors.InstantiationException: Error locating target 'src.data.fsd_datamodule.FSDDataModule', set env var HYDRA_FULL_ERROR=1 to see chained exception.
+full_key: data
+[[36m2024-09-08 09:20:23,502[0m][[34mutils.utils[0m][[32mINFO[0m] - [rank: 0] Output dir: /data/scratch/acw572/LHGNN/logs/train-audioset-new/runs/2024-09-08_09-20-23[0m
+Error executing job with overrides: ['trainer.max_epochs=50', 'trainer.min_epochs=50', 'trainer.num_nodes=1', 'trainer.devices=1', 'trainer.strategy=ddp', 'data.batch_size=32']
+Traceback (most recent call last):
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 644, in _locate
+    obj = getattr(obj, part)
+          ^^^^^^^^^^^^^^^^^^
+AttributeError: module 'src.data' has no attribute 'fsd_datamodule'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 650, in _locate
+    obj = import_module(mod)
+          ^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1129, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1059, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/data/home/acw572/hgann/HGANN/src/data/fsd_datamodule.py", line 195
+    sampler=None
+            ^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 134, in _resolve_target
+    target = _locate(target)
+             ^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 658, in _locate
+    raise ImportError(
+ImportError: Error loading 'src.data.fsd_datamodule.FSDDataModule':
+SyntaxError('invalid syntax. Perhaps you forgot a comma?', ('/data/home/acw572/hgann/HGANN/src/data/fsd_datamodule.py', 195, 21, '            sampler=None\n', 196, 26))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/data/home/acw572/hgann/HGANN/src/train.py", line 199, in <module>
+    main()
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/main.py", line 94, in decorated_main
+    _run_hydra(
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 394, in _run_hydra
+    _run_app(
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 457, in _run_app
+    run_and_report(
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 223, in run_and_report
+    raise ex
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 220, in run_and_report
+    return func()
+           ^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/utils.py", line 458, in <lambda>
+    lambda: hydra.run(
+            ^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/hydra.py", line 132, in run
+    _ = ret.return_value
+        ^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/core/utils.py", line 260, in return_value
+    raise self._return_value
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/core/utils.py", line 186, in run_job
+    ret.return_value = task_function(task_cfg)
+                       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/hgann/HGANN/src/train.py", line 183, in main
+    metrics,_ = train(cfg)
+                ^^^^^^^^^^
+  File "/data/home/acw572/hgann/HGANN/src/utils/utils.py", line 111, in wrap
+    raise ex
+  File "/data/home/acw572/hgann/HGANN/src/utils/utils.py", line 101, in wrap
+    metric_dict, object_dict = task_func(cfg=cfg)
+                               ^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/hgann/HGANN/src/train.py", line 75, in train
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 226, in instantiate
+    return instantiate_node(
+           ^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 333, in instantiate_node
+    _target_ = _resolve_target(node.get(_Keys.TARGET), full_key)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/home/acw572/.conda/envs/hgann/lib/python3.12/site-packages/hydra/_internal/instantiate/_instantiate2.py", line 139, in _resolve_target
+    raise InstantiationException(msg) from e
+hydra.errors.InstantiationException: Error locating target 'src.data.fsd_datamodule.FSDDataModule', set env var HYDRA_FULL_ERROR=1 to see chained exception.
+full_key: data

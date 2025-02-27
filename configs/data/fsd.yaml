@@ -1,13 +1,13 @@
 # Description: Configuration file for FSD50K dataset 
 _target_: src.data.fsd_datamodule.FSDDataModule 
-json_path: ${paths.exp_dir}/LHGNN/datafiles/
+json_path: ${paths.exp_dir}/hdf_fsd50k/datafiles/
 data_dir: ${paths.data_dir}
 meta_path: ${paths.data_dir}/ground_truth
 label_csv_pth: ${paths.exp_dir}/LHGNN/datafiles/class_labels_indices.csv
 samplr_csv_pth: ${paths.exp_dir}/LHGNN/datafiles/fsd50k_tr_full_weight.csv
 balance_samplr: True
 batch_size: 15 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 8
+num_workers: 16
 pin_memory: True 
 persistent_workers: True
 sr: 16000

@@ -7,7 +7,7 @@ import json
 import os 
 import pdb 
 from torch.utils.data.distributed import DistributedSampler
-from src.data.dataset import FSDDataset 
+from src.data.dataset_wav import FSDDataset 
 
 
 
@@ -65,10 +65,10 @@ class AudioSetModule(LightningDataModule):
             os.mkdir(self.json_path)
         self.num_devices = int(num_devices)
         if self.subset == 'bal':
-            self.tr_json = self.json_path + 'audioset_bal_tr.json'
+            self.tr_json = self.json_path + 'balanced_train_segments.json'
         else:
-            self.tr_json = self.json_path + 'audioset_all_tr.json'
-        self.eval_json = self.json_path + 'audioset_eval.json'
+            self.tr_json = self.json_path + 'audioset_tr_full.json'
+        self.eval_json = self.json_path + 'eval_full.json'
         
         self.audio_conf = {'sr':sr,'fmin':fmin,'fmax':fmax,'num_mels':num_mels,'window_type':window_type,'target_len':target_len,'freqm':freqm,'timem':timem,'norm_mean':norm_mean,'norm_std':norm_std,'mixup':mixup} 
         self.persistent_workers = persistent_workers
@@ -99,13 +99,23 @@ class AudioSetModule(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            shuffle=self.sampler,
             persistent_workers=self.persistent_workers) 
     
     def val_dataloader(self)-> DataLoader[Any]:
 
         self.sampler = None
 
+        return DataLoader(dataset=self.eval_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            pin_memory=self.pin_memory,
+            shuffle=False,
+            sampler=self.sampler,
+            persistent_workers=self.persistent_workers     
+        )
+    
+    def test_dataloader(self)-> DataLoader[Any]:
+        self.sampler = None
         return DataLoader(dataset=self.eval_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,

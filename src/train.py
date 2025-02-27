@@ -121,13 +121,15 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("eval"):
         log.info("Evaluating  for single model!")
+        path = '/data/scratch/acw572/runs/2024-04-13_14-38-01/checkpoints/last.ckpt'
+        state_dict = torch.load(path)
         ckpt_path = trainer.checkpoint_callback.best_model_path
         ckpt = torch.load(ckpt_path)
-        model.load_state_dict(ckpt['state_dict'],strict=True)
+        model.load_state_dict(state_dict,strict=True)
         
-        test_results = trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
-        logging.info(f"Test results: {test_results['mAP']}")
-        log.info(f"Test mAP: {test_results['mAP']}")
+        test_results = trainer.test(model=model, datamodule=datamodule)
+        #logging.info(f"Test results: {test_results['mAP']}")
+        #log.info(f"Test mAP: {test_results['mAP']}")
     # Weighted Average Model 
         
     if cfg.get("wa"):
